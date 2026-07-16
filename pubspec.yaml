@@ -1,0 +1,39 @@
+name: ilk_mobil_uygulamam
+description: "Faydam PDKS Mobil Uygulaması"
+
+# Uygulamanın yanlışlıkla pub.dev'e yüklenmesini engeller
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Tasarımda kullanılan iOS tarzı ikonlar için
+  cupertino_icons: ^1.0.6
+
+  # Tema ve durum yönetimi için kullandığınız kütüphane
+  provider: ^6.1.2
+
+  # QR Tarayıcı ve kamera erişimi için eklediğimiz modern kütüphane
+  mobile_scanner: ^5.1.1
+  intl: ^0.20.3
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  # Kod standartlarını denetleyen paket
+  flutter_lints: ^3.0.0
+
+flutter:
+  # Material Design ikonlarını ve bileşenlerini aktif eder
+  uses-material-design: true
+
+  # Giriş ekranındaki şirket logosunun (faydam_logo.jpg) yüklenebilmesi için asset tanımı
+  assets:
+    - assets/faydam_logo.jpg
