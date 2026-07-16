@@ -1,108 +1,169 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:mobile_scanner/mobile_scanner.dart';
+import 'package:ilk_mobil_uygulamam/api_service.dart';
 import 'package:provider/provider.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
+import 'package:uuid/uuid.dart';
 import 'app_provider.dart';
+import 'services/api_service.dart';
 
-class QRScanScreen extends StatefulWidget {
-  const QRScanScreen({Key? key}) : super(key: key);
+class QrScreen extends StatefulWidget {
+  const QrScreen({Key? key}) : super(key: key);
 
   @override
-  State<QRScanScreen> createState() => _QRScanScreenState();
+  State<QrScreen> createState() => _QrScreenState();
 }
 
-class _QRScanScreenState extends State<QRScanScreen> with SingleTickerProviderStateMixin {
-  late AnimationController _animationController;
+class _QrScreenState extends State<QrScreen> {
+  final ApiService _apiService = ApiService();
+  final MobileScannerController _scannerController = MobileScannerController();
+  final Uuid _uuid = const Uuid();
   bool _isProcessing = false;
 
-  @override
-  void initState() {
-    super.initState();
-    _animationController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 2),
-    )..repeat(reverse: true);
-  }
-
-  @override
-  void dispose() {
-    _animationController.dispose();
-    super.dispose();
-  }
-
-  void _processQRCode(String qrContent) {
+  void _onDetect(BarcodeCapture capture) async {
     if (_isProcessing) return;
+
+    final List<Barcode> barcodes = capture.barcodes;
+    if (barcodes.isEmpty) return;
+
+    final String? rawValue = barcodes.first.rawValue;
+    if (rawValue == null) return;
+
     setState(() {
       _isProcessing = true;
     });
 
-    String message = "";
-    Color alertColor = Colors.green;
+    // Tarayıcı kamerasını geçici olarak durduruyoruz
+    await _scannerController.stop();
 
-    final normalizedContent = qrContent.trim().toLowerCase();
+    try {
+      // 1. QR Kod Çözümleme ve Validasyon
+      final Map<String, dynamic> qrJson = jsonDecode(rawValue);
+      final int? version = qrJson['version'];
+      final String? eventType = qrJson['eventType'];
+      final int? zoneId = qrJson['zoneId'];
 
-    // 1. Durum: El yapımı test girdileri veya simülatör butonları
-    if (normalizedContent.contains("faydam_giris_qr") || normalizedContent == "giris") {
-      message = "Giriş Onaylandı! Veriler sisteme başarıyla işlendi.";
-      alertColor = Colors.green;
-    } 
-    else if (normalizedContent.contains("faydam_cikis_qr") || normalizedContent == "cikis") {
-      message = "Çıkış Onaylandı! Veriler sisteme başarıyla işlendi.";
-      alertColor = Colors.orange;
-    }
-    // 2. Durum: Link içeren gerçek QR kodlar (qrserver.com vb.)
-    else if (normalizedContent.contains("qrserver.com") || normalizedContent.contains("http")) {
-      // Eğer linkin içinde "register" veya "giriş" anlamına gelen bir kelime geçiyorsa Giriş QR kabul et
-      if (normalizedContent.contains("register") || normalizedContent.contains("giris")) {
-        message = "Giriş Onaylandı! Veriler sisteme başarıyla işlendi.";
-        alertColor = Colors.green;
-      } 
-      // Geçmiyorsa ya da diğer link tipindeyse Çıkış QR kabul et
-      else {
-        message = "Çıkış Onaylandı! Veriler sisteme başarıyla işlendi.";
-        alertColor = Colors.orange;
+      if (version != 1) {
+        throw Exception("Desteklenmeyen QR Sürümü.");
       }
-    } 
-    // 3. Durum: Tamamen alakasız bir QR kod okutulursa
-    else {
-      message = "Geçersiz QR Kod!\n\nOkunan Değer: \"$qrContent\"\n\nLütfen doğru kodu okutun.";
-      alertColor = Colors.red;
-    }
+      if (eventType != 'Entry' && eventType != 'Exit') {
+        throw Exception("Geçersiz geçiş tipi (Yalnızca Entry veya Exit olmalıdır).");
+      }
+      if (zoneId == null || zoneId <= 0) {
+        throw Exception("Geçersiz Bölge Kimliği (Zone ID).");
+      }
 
+      // 2. Benzersiz Cihaz Olay Kimliği Üretme (UUID)
+      final String deviceEventId = _uuid.v4();
+
+      // 3. API'ye Geçiş Olayını Gönderme
+      await _apiService.createAttendanceEvent(
+       eventType: eventType ?? 'Entry',
+        occurredAt: DateTime.now().toIso8601String(),
+        deviceEventId: deviceEventId,
+        zoneId: zoneId,
+      );
+
+      // 4. Bugünkü Puantaj Durumunu Doğrulama & Güncelleme
+      final todayData = await _apiService.getTodayAttendance();
+      
+      if (!mounted) return;
+
+      // Kullanıcıyı bilgilendirme modalı
+      _showSuccessDialog(
+        title: eventType == 'Entry' ? "Giriş Başarılı" : "Çıkış Başarılı",
+        message: "${qrJson['locationName'] ?? 'Bölge'} alanına geçiş kaydınız oluşturuldu.",
+        todayStatus: todayData,
+      );
+
+    } catch (e) {
+      if (!mounted) return;
+      _showErrorDialog(e.toString().replaceAll("Exception: ", ""));
+    } finally {
+      // İşlem tamamlandıktan sonra tarayıcıyı kontrollü şekilde yeniden açıyoruz
+      setState(() {
+        _isProcessing = false;
+      });
+    }
+  }
+
+  void _showSuccessDialog({
+    required String title,
+    required String message,
+    required Map<String, dynamic> todayStatus,
+  }) {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (BuildContext context) {
+      builder: (context) {
+        final settings = Provider.of<AppSettings>(context, listen: false);
+        final textColor = settings.isDarkMode ? Colors.white : AppColors.darkNavy;
+
         return AlertDialog(
-          backgroundColor: alertColor,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           title: Row(
             children: [
-              Icon(
-                alertColor == Colors.red ? Icons.error_outline : Icons.check_circle, 
-                color: Colors.white, 
-                size: 28
-              ),
-              const SizedBox(width: 10),
-              Text(
-                alertColor == Colors.red ? "Hatalı Kod" : "İşlem Başarılı", 
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)
-              ),
+              const Icon(Icons.check_circle, color: Colors.green, size: 28),
+              const SizedBox(width: 8),
+              Text(title, style: TextStyle(color: textColor)),
             ],
           ),
-          content: Text(
-            message,
-            style: const TextStyle(color: Colors.white, fontSize: 16),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(message, style: TextStyle(color: textColor)),
+              const SizedBox(height: 16),
+              const Divider(),
+              const SizedBox(height: 8),
+              Text(
+                "Bugünkü Durum: ${todayStatus['status'] ?? 'Aktif'}",
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+              if (todayStatus['firstEntry'] != null)
+                Text("İlk Giriş: ${todayStatus['firstEntry']}"),
+              if (todayStatus['lastExit'] != null)
+                Text("Son Çıkış: ${todayStatus['lastExit']}"),
+            ],
           ),
           actions: [
             TextButton(
-              onPressed: () {
+              onPressed: () async {
                 Navigator.of(context).pop();
-                setState(() {
-                  _isProcessing = false;
-                });
+                await _scannerController.start();
               },
-              child: const Text("Kapat", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-            ),
+              child: const Text("Tamam", style: TextStyle(color: AppColors.neonTurquoise)),
+            )
+          ],
+        );
+      },
+    );
+  }
+
+  void _showErrorDialog(String errorMessage) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        final settings = Provider.of<AppSettings>(context, listen: false);
+        final textColor = settings.isDarkMode ? Colors.white : AppColors.darkNavy;
+
+        return AlertDialog(
+          title: Row(
+            children: [
+              const Icon(Icons.error, color: Colors.red, size: 28),
+              const SizedBox(width: 8),
+              Text("Hata", style: TextStyle(color: textColor)),
+            ],
+          ),
+          content: Text(errorMessage, style: TextStyle(color: textColor)),
+          actions: [
+            TextButton(
+              onPressed: () async {
+                Navigator.of(context).pop();
+                await _scannerController.start();
+              },
+              child: const Text("Yeniden Dene", style: TextStyle(color: AppColors.neonTurquoise)),
+            )
           ],
         );
       },
@@ -110,127 +171,50 @@ class _QRScanScreenState extends State<QRScanScreen> with SingleTickerProviderSt
   }
 
   @override
+  void dispose() {
+    _scannerController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final settings = Provider.of<AppSettings>(context);
-    final cardBg = settings.isDarkMode ? AppColors.cardNavy : Colors.white;
     final textColor = settings.isDarkMode ? Colors.white : AppColors.darkNavy;
 
     return Scaffold(
       backgroundColor: settings.isDarkMode ? AppColors.darkNavy : AppColors.lightBackground,
       appBar: AppBar(
-        title: const Text("QR Tarama", style: TextStyle(fontWeight: FontWeight.bold)),
-        centerTitle: true,
-        backgroundColor: settings.isDarkMode ? AppColors.darkNavy : AppColors.lightBackground,
+        title: Text("Geçiş Kontrol QR", style: TextStyle(color: textColor)),
+        backgroundColor: Colors.transparent,
         elevation: 0,
-        automaticallyImplyLeading: false,
+        iconTheme: IconThemeData(color: textColor),
       ),
       body: Stack(
         children: [
-          // Kamera Alanı
+          MobileScanner(
+            controller: _scannerController,
+            onDetect: _onDetect,
+          ),
+          // QR çerçeve efekti ve bekleme göstergesi
           Center(
             child: Container(
-              width: 300,
-              height: 300,
+              width: 260,
+              height: 260,
               decoration: BoxDecoration(
-                color: Colors.black,
+                border: Border.all(color: AppColors.neonTurquoise, width: 4),
                 borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: AppColors.neonTurquoise, width: 2),
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(22),
-                child: MobileScanner(
-                  onDetect: (capture) {
-                    final List<Barcode> barcodes = capture.barcodes;
-                    for (final barcode in barcodes) {
-                      final String? rawValue = barcode.rawValue;
-                      if (rawValue != null) {
-                        _processQRCode(rawValue);
-                        break;
-                      }
-                    }
-                  },
-                ),
               ),
             ),
           ),
-          // Kırmızı/Mavi Lazer Çizgisi Animasyonu
-          Center(
-            child: SizedBox(
-              width: 280,
-              height: 280,
-              child: AnimatedBuilder(
-                animation: _animationController,
-                builder: (context, child) {
-                  return Stack(
-                    children: [
-                      Positioned(
-                        top: _animationController.value * 280,
-                        left: 0,
-                        right: 0,
-                        child: Container(
-                          height: 3,
-                          decoration: BoxDecoration(
-                            color: AppColors.neonTurquoise,
-                            boxShadow: [
-                              BoxShadow(
-                                color: AppColors.neonTurquoise.withOpacity(0.8),
-                                blurRadius: 8,
-                                spreadRadius: 2,
-                              )
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  );
-                },
-              ),
-            ),
-          ),
-          // Bilgilendirme ve Hızlı Test Butonları
-          Column(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              Text(
-                "Giriş/Çıkış için QR Kodu Hizalayın",
-                style: TextStyle(color: textColor, fontSize: 16, fontWeight: FontWeight.w600),
-              ),
-              const SizedBox(height: 30),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green,
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        ),
-                        onPressed: () => _processQRCode("faydam_giris_qr"),
-                        icon: const Icon(Icons.login, color: Colors.white),
-                        label: const Text("Giriş Test", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.orange,
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        ),
-                        onPressed: () => _processQRCode("faydam_cikis_qr"),
-                        icon: const Icon(Icons.logout, color: Colors.white),
-                        label: const Text("Çıkış Test", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                      ),
-                    ),
-                  ],
+          if (_isProcessing)
+            Container(
+              color: Colors.black.withOpacity(0.5),
+              child: const Center(
+                child: CircularProgressIndicator(
+                  color: AppColors.neonTurquoise,
                 ),
               ),
-              const SizedBox(height: 20),
-            ],
-          ),
+            ),
         ],
       ),
     );

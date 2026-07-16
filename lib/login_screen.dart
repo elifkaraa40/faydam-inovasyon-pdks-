@@ -1,7 +1,10 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:ilk_mobil_uygulamam/api_service.dart';
 import 'package:provider/provider.dart';
 import 'app_provider.dart';
-import 'main_screen.dart'; // Yönlendirme yapacağımız ana ekran
+import 'main_screen.dart';
+import 'services/api_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
@@ -13,8 +16,11 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  final ApiService _apiService = ApiService();
+  
   bool _isLoading = false;
   bool _rememberMe = false;
+  bool _obscurePassword = true;
 
   void _handleLogin() async {
     final email = _emailController.text.trim();
@@ -31,29 +37,46 @@ class _LoginScreenState extends State<LoginScreen> {
       _isLoading = true;
     });
 
-    // API bağlantısı olmadığı için yapay bir gecikme simülasyonu yapıyoruz (1 saniye)
-    await Future.delayed(const Duration(seconds: 1));
+    try {
+      // Gerçek Cihaz Adını Alıyoruz
+      String deviceName = "Android Cihaz";
+      if (Platform.isIOS) {
+        deviceName = "iOS Cihaz";
+      }
 
-    setState(() {
-      _isLoading = false;
-    });
+      // API Servis üzerinden giriş yapıyoruz
+      final result = await _apiService.login(email, password, deviceName);
+      final user = Map<String, dynamic>.from(result['user']);
 
-    // GEÇİCİ API YÖNLENDİRME MANTIĞI:
-    // Eğer girilen bilgiler bizim test hesaplarımızdan biriyse doğrudan içeri alıyoruz!
-    if (email == "yonetici2@faydam.com" && password == "12345678") {
-      // Başarılı giriş: Kullanıcıyı MainScreen'e yönlendiriyoruz
+      if (!mounted) return;
+
+      // Kullanıcı bilgilerini AppSettings provider'a aktarıyoruz
+      context.read<AppSettings>().loginSuccess(
+            result['accessToken'],
+            user['id'],
+            user['fullName'],
+            user['email'],
+          );
+
+      // Ana Ekrana geçiş yapıyoruz
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => const MainScreen()),
       );
-    } else {
-      // Eğer bilgiler uyuşmuyorsa bir uyarı gösteriyoruz (veya test kolaylığı için bunu da içeri alabilirsin)
+    } catch (error) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("E-posta veya şifre hatalı! (Test için: yonetici2@faydam.com / 12345678)"),
+        SnackBar(
+          content: Text(error.toString().replaceAll("Exception: ", "")),
           backgroundColor: Colors.red,
         ),
       );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -88,12 +111,23 @@ class _LoginScreenState extends State<LoginScreen> {
                 Image.asset(
                   'assets/faydam_logo.jpg',
                   height: 100,
+                  errorBuilder: (context, error, stackTrace) {
+                    return Container(
+                      height: 100,
+                      alignment: Alignment.center,
+                      child: Text(
+                        "FAYDAM PDKS",
+                        style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: textColor),
+                      ),
+                    );
+                  },
                 ),
                 const SizedBox(height: 32),
 
                 // E-posta Girişi
                 TextField(
                   controller: _emailController,
+                  keyboardType: TextInputType.emailAddress,
                   style: TextStyle(color: textColor),
                   decoration: InputDecoration(
                     hintText: "E-posta Adresi",
@@ -111,13 +145,24 @@ class _LoginScreenState extends State<LoginScreen> {
                 // Şifre Girişi
                 TextField(
                   controller: _passwordController,
-                  obscureText: true,
+                  obscureText: _obscurePassword,
                   style: TextStyle(color: textColor),
                   decoration: InputDecoration(
                     hintText: "Şifre",
                     hintStyle: const TextStyle(color: Colors.grey),
                     filled: true,
                     fillColor: settings.isDarkMode ? AppColors.darkNavy : Colors.grey[100],
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                        color: Colors.grey,
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          _obscurePassword = !_obscurePassword;
+                        });
+                      },
+                    ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide.none,
@@ -143,7 +188,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 16),
 
-                // Giriş Butonu (Dönme efekti veya Giriş Yap yazısı)
+                // Giriş Butonu
                 SizedBox(
                   width: double.infinity,
                   height: 52,
