@@ -1,13 +1,14 @@
 import 'dart:io';
+
 import 'package:flutter/material.dart';
-import 'package:ilk_mobil_uygulamam/api_service.dart';
 import 'package:provider/provider.dart';
+
 import 'app_provider.dart';
 import 'main_screen.dart';
 import 'services/api_service.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({Key? key}) : super(key: key);
+  const LoginScreen({super.key});
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -15,20 +16,42 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _emailController = TextEditingController();
+
   final TextEditingController _passwordController = TextEditingController();
+
   final ApiService _apiService = ApiService();
-  
+
   bool _isLoading = false;
   bool _rememberMe = false;
   bool _obscurePassword = true;
 
-  void _handleLogin() async {
+  Future<void> _handleLogin() async {
+    if (_isLoading) return;
+
     final email = _emailController.text.trim();
-    final password = _passwordController.text.trim();
+
+    // Parolaya trim uygulanmaz. Kullanıcının girdiği değer
+    // değiştirilmeden API'ye gönderilir.
+    final password = _passwordController.text;
 
     if (email.isEmpty || password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Lütfen tüm alanları doldurun.")),
+        const SnackBar(
+          content: Text(
+            'Lütfen e-posta ve parola alanlarını doldurun.',
+          ),
+        ),
+      );
+      return;
+    }
+
+    if (password.length < 6) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Parola en az 6 karakter olmalıdır.',
+          ),
+        ),
       );
       return;
     }
@@ -38,36 +61,67 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
-      // Gerçek Cihaz Adını Alıyoruz
-      String deviceName = "Android Cihaz";
+      String deviceName = 'Android Cihaz';
+
       if (Platform.isIOS) {
-        deviceName = "iOS Cihaz";
+        deviceName = 'iOS Cihaz';
       }
 
-      // API Servis üzerinden giriş yapıyoruz
-      final result = await _apiService.login(email, password, deviceName);
-      final user = Map<String, dynamic>.from(result['user']);
+      final result = await _apiService.login(
+        email,
+        password,
+        deviceName,
+      );
+
+      final userData = result['user'];
+
+      if (userData is! Map) {
+        throw Exception(
+          'Sunucudan geçerli kullanıcı bilgisi alınamadı.',
+        );
+      }
+
+      final user = Map<String, dynamic>.from(userData);
+
+      final accessToken = result['accessToken']?.toString() ?? '';
+
+      final userId = user['id']?.toString() ?? '';
+
+      final fullName = user['fullName']?.toString() ?? '';
+
+      final userEmail = user['email']?.toString() ?? '';
+
+      if (accessToken.isEmpty ||
+          userId.isEmpty ||
+          fullName.isEmpty ||
+          userEmail.isEmpty) {
+        throw Exception(
+          'Giriş cevabındaki kullanıcı bilgileri eksik.',
+        );
+      }
 
       if (!mounted) return;
 
-      // Kullanıcı bilgilerini AppSettings provider'a aktarıyoruz
       context.read<AppSettings>().loginSuccess(
-            result['accessToken'],
-            user['id'],
-            user['fullName'],
-            user['email'],
+            accessToken,
+            userId,
+            fullName,
+            userEmail,
           );
 
-      // Ana Ekrana geçiş yapıyoruz
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const MainScreen()),
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (_) => const MainScreen(),
+        ),
       );
     } catch (error) {
       if (!mounted) return;
+
+      final message = error.toString().replaceFirst('Exception: ', '');
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(error.toString().replaceAll("Exception: ", "")),
+          content: Text(message),
           backgroundColor: Colors.red,
         ),
       );
@@ -81,13 +135,23 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final settings = Provider.of<AppSettings>(context);
+
     final cardBg = settings.isDarkMode ? AppColors.cardNavy : Colors.white;
+
     final textColor = settings.isDarkMode ? Colors.white : AppColors.darkNavy;
 
     return Scaffold(
-      backgroundColor: settings.isDarkMode ? AppColors.darkNavy : AppColors.lightBackground,
+      backgroundColor:
+          settings.isDarkMode ? AppColors.darkNavy : AppColors.lightBackground,
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24.0),
@@ -98,42 +162,60 @@ class _LoginScreenState extends State<LoginScreen> {
               borderRadius: BorderRadius.circular(24),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
+                  color: Colors.black.withValues(alpha:0.1),
                   blurRadius: 20,
                   spreadRadius: 5,
-                )
+                ),
               ],
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Şirket Logosu
+                // Şirket logosu
                 Image.asset(
                   'assets/faydam_logo.jpg',
                   height: 100,
-                  errorBuilder: (context, error, stackTrace) {
+                  errorBuilder: (
+                    context,
+                    error,
+                    stackTrace,
+                  ) {
                     return Container(
                       height: 100,
                       alignment: Alignment.center,
                       child: Text(
-                        "FAYDAM PDKS",
-                        style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: textColor),
+                        'FAYDAM PDKS',
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: textColor,
+                        ),
                       ),
                     );
                   },
                 ),
                 const SizedBox(height: 32),
 
-                // E-posta Girişi
+                // E-posta alanı
                 TextField(
                   controller: _emailController,
+                  enabled: !_isLoading,
                   keyboardType: TextInputType.emailAddress,
+                  textInputAction: TextInputAction.next,
+                  autofillHints: const [
+                    AutofillHints.email,
+                    AutofillHints.username,
+                  ],
                   style: TextStyle(color: textColor),
                   decoration: InputDecoration(
-                    hintText: "E-posta Adresi",
-                    hintStyle: const TextStyle(color: Colors.grey),
+                    hintText: 'E-posta Adresi',
+                    hintStyle: const TextStyle(
+                      color: Colors.grey,
+                    ),
                     filled: true,
-                    fillColor: settings.isDarkMode ? AppColors.darkNavy : Colors.grey[100],
+                    fillColor: settings.isDarkMode
+                        ? AppColors.darkNavy
+                        : Colors.grey[100],
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide.none,
@@ -142,26 +224,49 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 16),
 
-                // Şifre Girişi
+                // Parola alanı
                 TextField(
                   controller: _passwordController,
+                  enabled: !_isLoading,
                   obscureText: _obscurePassword,
+                  textInputAction: TextInputAction.done,
+                  autofillHints: const [
+                    AutofillHints.password,
+                  ],
+                  enableSuggestions: false,
+                  autocorrect: false,
+                  onSubmitted: (_) {
+                    if (!_isLoading) {
+                      _handleLogin();
+                    }
+                  },
                   style: TextStyle(color: textColor),
                   decoration: InputDecoration(
-                    hintText: "Şifre",
-                    hintStyle: const TextStyle(color: Colors.grey),
+                    hintText: 'Şifre',
+                    hintStyle: const TextStyle(
+                      color: Colors.grey,
+                    ),
                     filled: true,
-                    fillColor: settings.isDarkMode ? AppColors.darkNavy : Colors.grey[100],
+                    fillColor: settings.isDarkMode
+                        ? AppColors.darkNavy
+                        : Colors.grey[100],
                     suffixIcon: IconButton(
+                      tooltip: _obscurePassword
+                          ? 'Parolayı göster'
+                          : 'Parolayı gizle',
                       icon: Icon(
-                        _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                        _obscurePassword
+                            ? Icons.visibility_off
+                            : Icons.visibility,
                         color: Colors.grey,
                       ),
-                      onPressed: () {
-                        setState(() {
-                          _obscurePassword = !_obscurePassword;
-                        });
-                      },
+                      onPressed: _isLoading
+                          ? null
+                          : () {
+                              setState(() {
+                                _obscurePassword = !_obscurePassword;
+                              });
+                            },
                     ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -177,18 +282,25 @@ class _LoginScreenState extends State<LoginScreen> {
                     Checkbox(
                       value: _rememberMe,
                       activeColor: AppColors.neonTurquoise,
-                      onChanged: (val) {
-                        setState(() {
-                          _rememberMe = val ?? false;
-                        });
-                      },
+                      onChanged: _isLoading
+                          ? null
+                          : (value) {
+                              setState(() {
+                                _rememberMe = value ?? false;
+                              });
+                            },
                     ),
-                    Text("Beni Hatırla", style: TextStyle(color: textColor)),
+                    Text(
+                      'Beni Hatırla',
+                      style: TextStyle(
+                        color: textColor,
+                      ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 16),
 
-                // Giriş Butonu
+                // Giriş butonu
                 SizedBox(
                   width: double.infinity,
                   height: 52,
@@ -210,7 +322,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                           )
                         : const Text(
-                            "Sisteme Giriş Yap",
+                            'Sisteme Giriş Yap',
                             style: TextStyle(
                               color: AppColors.neonTurquoise,
                               fontWeight: FontWeight.bold,

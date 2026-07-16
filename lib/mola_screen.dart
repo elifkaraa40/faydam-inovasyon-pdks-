@@ -14,16 +14,15 @@ class MolaScreen extends StatefulWidget {
 class _MolaScreenState extends State<MolaScreen> {
   bool _isMolaActive = false;
   Timer? _molaTimer;
-  
-  int _secondsPassed = 0;       
-  int _remainingSeconds = 3600;  
+
+  int _secondsPassed = 0;
+  int _remainingSeconds = 3600;
   void _toggleMola() {
     setState(() {
       _isMolaActive = !_isMolaActive;
     });
 
     if (_isMolaActive) {
-      
       _molaTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
         setState(() {
           _secondsPassed++;
@@ -33,7 +32,7 @@ class _MolaScreenState extends State<MolaScreen> {
         });
       });
     } else {
-         _molaTimer?.cancel();
+      _molaTimer?.cancel();
     }
   }
 
@@ -52,15 +51,20 @@ class _MolaScreenState extends State<MolaScreen> {
   @override
   Widget build(BuildContext context) {
     final settings = Provider.of<AppSettings>(context);
-    final cardBg = settings.isDarkMode ? AppColors.cardNavy : AppColors.lightCard;
+    final cardBg =
+        settings.isDarkMode ? AppColors.cardNavy : AppColors.lightCard;
     final textColor = settings.isDarkMode ? Colors.white : AppColors.darkNavy;
 
     return Scaffold(
-      backgroundColor: settings.isDarkMode ? AppColors.darkNavy : AppColors.lightBackground,
+      backgroundColor:
+          settings.isDarkMode ? AppColors.darkNavy : AppColors.lightBackground,
       appBar: AppBar(
-        title: const Text("Mola İşlemleri", style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text("Mola İşlemleri",
+            style: TextStyle(fontWeight: FontWeight.bold)),
         centerTitle: true,
-        backgroundColor: settings.isDarkMode ? AppColors.darkNavy : AppColors.lightBackground,
+        backgroundColor: settings.isDarkMode
+            ? AppColors.darkNavy
+            : AppColors.lightBackground,
         elevation: 0,
         automaticallyImplyLeading: false,
       ),
@@ -69,20 +73,24 @@ class _MolaScreenState extends State<MolaScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-        
             Row(
               children: [
                 Expanded(
                   child: Container(
                     padding: const EdgeInsets.symmetric(vertical: 20),
-                    decoration: BoxDecoration(color: cardBg, borderRadius: BorderRadius.circular(12)),
+                    decoration: BoxDecoration(
+                        color: cardBg, borderRadius: BorderRadius.circular(12)),
                     child: Column(
                       children: [
-                        const Text("Mola Geçen", style: TextStyle(color: Colors.grey, fontSize: 13)),
+                        const Text("Mola Geçen",
+                            style: TextStyle(color: Colors.grey, fontSize: 13)),
                         const SizedBox(height: 8),
                         Text(
                           _formatTime(_secondsPassed),
-                          style: const TextStyle(color: AppColors.neonTurquoise, fontWeight: FontWeight.bold, fontSize: 24),
+                          style: const TextStyle(
+                              color: AppColors.neonTurquoise,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 24),
                         ),
                       ],
                     ),
@@ -92,14 +100,19 @@ class _MolaScreenState extends State<MolaScreen> {
                 Expanded(
                   child: Container(
                     padding: const EdgeInsets.symmetric(vertical: 20),
-                    decoration: BoxDecoration(color: cardBg, borderRadius: BorderRadius.circular(12)),
+                    decoration: BoxDecoration(
+                        color: cardBg, borderRadius: BorderRadius.circular(12)),
                     child: Column(
                       children: [
-                        const Text("Kalan Hak", style: TextStyle(color: Colors.grey, fontSize: 13)),
+                        const Text("Kalan Hak",
+                            style: TextStyle(color: Colors.grey, fontSize: 13)),
                         const SizedBox(height: 8),
                         Text(
                           _formatTime(_remainingSeconds),
-                          style: const TextStyle(color: AppColors.accentOrange, fontWeight: FontWeight.bold, fontSize: 24),
+                          style: const TextStyle(
+                              color: AppColors.accentOrange,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 24),
                         ),
                       ],
                     ),
@@ -108,34 +121,44 @@ class _MolaScreenState extends State<MolaScreen> {
               ],
             ),
             const SizedBox(height: 24),
-
-           
-            const Text("Moladaki Çalışma Arkadaşlarım", style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold, fontSize: 16)),
+            const Text("Moladaki Çalışma Arkadaşlarım",
+                style: TextStyle(
+                    color: Colors.grey,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16)),
             const SizedBox(height: 12),
-
             Expanded(
               child: ListView(
                 children: [
-                  _buildFriendCard("Ahmet Yılmaz", "10 dakikadır molada", cardBg, textColor),
-                  _buildFriendCard("Ayşe Demir", "5 dakikadır molada", cardBg, textColor),
+                  _buildFriendCard(
+                      "Ahmet Yılmaz", "10 dakikadır molada", cardBg, textColor),
+                  _buildFriendCard(
+                      "Ayşe Demir", "5 dakikadır molada", cardBg, textColor),
                 ],
               ),
             ),
-
-      
             SizedBox(
               width: double.infinity,
               height: 56,
               child: OutlinedButton(
                 onPressed: _toggleMola,
                 style: OutlinedButton.styleFrom(
-                  side: BorderSide(color: _isMolaActive ? Colors.red : AppColors.neonTurquoise, width: 2),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  backgroundColor: settings.isDarkMode ? AppColors.darkNavy : Colors.white,
+                  side: BorderSide(
+                      color:
+                          _isMolaActive ? Colors.red : AppColors.neonTurquoise,
+                      width: 2),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                  backgroundColor:
+                      settings.isDarkMode ? AppColors.darkNavy : Colors.white,
                 ),
                 child: Text(
                   _isMolaActive ? "Molayı Bitir" : "Molaya Başla",
-                  style: TextStyle(color: _isMolaActive ? Colors.red : AppColors.neonTurquoise, fontSize: 16, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                      color:
+                          _isMolaActive ? Colors.red : AppColors.neonTurquoise,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold),
                 ),
               ),
             ),
@@ -153,10 +176,13 @@ class _MolaScreenState extends State<MolaScreen> {
       child: ListTile(
         leading: const CircleAvatar(
           backgroundColor: AppColors.darkNavy,
-          child: Icon(CupertinoIcons.person_fill, color: AppColors.neonTurquoise),
+          child:
+              Icon(CupertinoIcons.person_fill, color: AppColors.neonTurquoise),
         ),
-        title: Text(name, style: TextStyle(color: textClr, fontWeight: FontWeight.bold)),
-        subtitle: Text(time, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+        title: Text(name,
+            style: TextStyle(color: textClr, fontWeight: FontWeight.bold)),
+        subtitle: Text(time,
+            style: const TextStyle(color: Colors.grey, fontSize: 12)),
       ),
     );
   }

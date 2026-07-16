@@ -17,11 +17,10 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   int _selectedIndex = 0;
 
-  
   final List<Widget> _screens = [
     const HomeScreen(),
     const MolaScreen(),
-   const QrScreen(),
+    const QrScreen(),
     const IzinScreen(),
     const ProfileScreen(),
   ];
@@ -29,7 +28,6 @@ class _MainScreenState extends State<MainScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      
       body: IndexedStack(
         index: _selectedIndex,
         children: _screens,
@@ -45,14 +43,20 @@ class _MainScreenState extends State<MainScreen> {
         backgroundColor: AppColors.darkNavy,
         selectedItemColor: AppColors.neonTurquoise,
         unselectedItemColor: Colors.white30,
-        selectedLabelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+        selectedLabelStyle:
+            const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
         unselectedLabelStyle: const TextStyle(fontSize: 12),
         items: const [
-          BottomNavigationBarItem(icon: Icon(CupertinoIcons.home), label: "Ana Sayfa"),
-          BottomNavigationBarItem(icon: Icon(CupertinoIcons.drop), label: "Mola"),
-          BottomNavigationBarItem(icon: Icon(CupertinoIcons.qrcode_viewfinder), label: "QR Kod"),
-          BottomNavigationBarItem(icon: Icon(CupertinoIcons.calendar), label: "İzin"),
-          BottomNavigationBarItem(icon: Icon(CupertinoIcons.person), label: "Profilim"),
+          BottomNavigationBarItem(
+              icon: Icon(CupertinoIcons.home), label: "Ana Sayfa"),
+          BottomNavigationBarItem(
+              icon: Icon(CupertinoIcons.drop), label: "Mola"),
+          BottomNavigationBarItem(
+              icon: Icon(CupertinoIcons.qrcode_viewfinder), label: "QR Kod"),
+          BottomNavigationBarItem(
+              icon: Icon(CupertinoIcons.calendar), label: "İzin"),
+          BottomNavigationBarItem(
+              icon: Icon(CupertinoIcons.person), label: "Profilim"),
         ],
       ),
     );

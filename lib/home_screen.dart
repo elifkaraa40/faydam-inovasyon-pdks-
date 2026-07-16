@@ -39,18 +39,22 @@ class _HomeScreenState extends State<HomeScreen> {
     const String bugunkuGirisSaati = "08:30";
     const String fazlaMesai = "2 Saat 15 Dk";
     const String eksikMesai = "45 Dakika";
-    
+
     final List<Map<String, String>> haftalikTablo = [
       {"gun": "Pazartesi", "giris": "08:25", "cikis": "18:05"},
       {"gun": "Salı", "giris": "08:45", "cikis": "18:00"},
     ];
 
     return Scaffold(
-      backgroundColor: settings.isDarkMode ? AppColors.darkNavy : AppColors.lightBackground,
+      backgroundColor:
+          settings.isDarkMode ? AppColors.darkNavy : AppColors.lightBackground,
       appBar: AppBar(
-        title: const Text("Ana Sayfa", style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text("Ana Sayfa",
+            style: TextStyle(fontWeight: FontWeight.bold)),
         centerTitle: true,
-        backgroundColor: settings.isDarkMode ? AppColors.darkNavy : AppColors.lightBackground,
+        backgroundColor: settings.isDarkMode
+            ? AppColors.darkNavy
+            : AppColors.lightBackground,
         elevation: 0,
         automaticallyImplyLeading: false,
       ),
@@ -92,7 +96,8 @@ class _HomeScreenState extends State<HomeScreen> {
             // Günlük Durum Başlığı
             Text(
               "Günlük Durum",
-              style: TextStyle(color: textColor, fontSize: 16, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                  color: textColor, fontSize: 16, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
             Container(
@@ -102,16 +107,21 @@ class _HomeScreenState extends State<HomeScreen> {
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Row(
-               mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Row(
                     children: [
-                      const Icon(CupertinoIcons.arrow_right_to_line_alt, color: AppColors.neonTurquoise),
+                      const Icon(CupertinoIcons.arrow_right_to_line_alt,
+                          color: AppColors.neonTurquoise),
                       const SizedBox(width: 12),
-                      Text("Bugünkü Giriş Saati", style: TextStyle(color: textColor, fontWeight: FontWeight.w600)),
+                      Text("Bugünkü Giriş Saati",
+                          style: TextStyle(
+                              color: textColor, fontWeight: FontWeight.w600)),
                     ],
                   ),
-                  const Text(bugunkuGirisSaati, style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
+                  const Text(bugunkuGirisSaati,
+                      style: TextStyle(
+                          color: Colors.grey, fontWeight: FontWeight.bold)),
                 ],
               ),
             ),
@@ -120,7 +130,8 @@ class _HomeScreenState extends State<HomeScreen> {
             // Haftalık Tablo Başlığı
             Text(
               "Haftalık Tablo",
-              style: TextStyle(color: textColor, fontSize: 16, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                  color: textColor, fontSize: 16, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
 
@@ -135,11 +146,23 @@ class _HomeScreenState extends State<HomeScreen> {
                 children: [
                   // Tablo Başlıkları
                   const Row(
-               mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Expanded(child: Text("Gün", style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold))),
-                      Expanded(child: Text("Giriş", style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold))),
-                      Expanded(child: Text("Çıkış", style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold))),
+                      Expanded(
+                          child: Text("Gün",
+                              style: TextStyle(
+                                  color: Colors.grey,
+                                  fontWeight: FontWeight.bold))),
+                      Expanded(
+                          child: Text("Giriş",
+                              style: TextStyle(
+                                  color: Colors.grey,
+                                  fontWeight: FontWeight.bold))),
+                      Expanded(
+                          child: Text("Çıkış",
+                              style: TextStyle(
+                                  color: Colors.grey,
+                                  fontWeight: FontWeight.bold))),
                     ],
                   ),
                   const Divider(color: Colors.white10, height: 24),
@@ -152,17 +175,17 @@ class _HomeScreenState extends State<HomeScreen> {
                     return Padding(
                       padding: const EdgeInsets.symmetric(vertical: 8.0),
                       child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Expanded(
                             child: Text(
-                              veri["gun"] ?? "", 
+                              veri["gun"] ?? "",
                               style: const TextStyle(color: Colors.grey),
                             ),
                           ),
                           Expanded(
                             child: Text(
-                              veri["giris"] ?? "", 
+                              veri["giris"] ?? "",
                               style: TextStyle(
                                 color: isLate ? Colors.red : Colors.grey,
                                 fontWeight: FontWeight.bold,
@@ -171,7 +194,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                           Expanded(
                             child: Text(
-                              veri["cikis"] ?? "", 
+                              veri["cikis"] ?? "",
                               style: TextStyle(
                                 color: isOvertime ? Colors.orange : Colors.grey,
                                 fontWeight: FontWeight.bold,
@@ -200,11 +223,15 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: const Column(
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        Text("Fazla Mesai", style: TextStyle(color: Colors.grey, fontSize: 12)),
+                        Text("Fazla Mesai",
+                            style: TextStyle(color: Colors.grey, fontSize: 12)),
                         SizedBox(height: 6),
                         Text(
                           fazlaMesai,
-                          style: TextStyle(color: Colors.orange, fontWeight: FontWeight.bold, fontSize: 14),
+                          style: TextStyle(
+                              color: Colors.orange,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14),
                         ),
                       ],
                     ),
@@ -221,11 +248,15 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: const Column(
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        Text("Eksik Mesai", style: TextStyle(color: Colors.grey, fontSize: 12)),
+                        Text("Eksik Mesai",
+                            style: TextStyle(color: Colors.grey, fontSize: 12)),
                         SizedBox(height: 6),
                         Text(
                           eksikMesai,
-                          style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold, fontSize: 14),
+                          style: TextStyle(
+                              color: Colors.redAccent,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14),
                         ),
                       ],
                     ),
