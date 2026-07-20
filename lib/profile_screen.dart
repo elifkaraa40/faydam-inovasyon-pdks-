@@ -2,7 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import 'app_provider.dart';
+import 'app_provider.dart' hide AppColors;
 import 'login_screen.dart';
 import 'services/api_service.dart';
 
@@ -53,7 +53,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final cardBg =
         settings.isDarkMode ? AppColors.cardNavy : AppColors.lightCard;
 
-    final textColor = settings.isDarkMode ? Colors.white : AppColors.darkNavy;
+    final textColor = settings.isDarkMode ? Colors.white : AppColors.darkNavyBg;
 
     final userName = settings.userName?.trim().isNotEmpty == true
         ? settings.userName!
@@ -65,7 +65,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     return Scaffold(
       backgroundColor:
-          settings.isDarkMode ? AppColors.darkNavy : AppColors.lightBackground,
+          settings.isDarkMode ? AppColors.darkNavyBg : AppColors.lightBackground,
       appBar: AppBar(
         title: const Text(
           'Profilim',
@@ -75,7 +75,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
         centerTitle: true,
         backgroundColor: settings.isDarkMode
-            ? AppColors.darkNavy
+            ? AppColors.darkNavyBg
             : AppColors.lightBackground,
         elevation: 0,
       ),
@@ -93,9 +93,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
               child: Row(
                 children: [
-                  const CircleAvatar(
+                  CircleAvatar(
                     radius: 30,
-                    backgroundColor: AppColors.darkNavy,
+                    backgroundColor: AppColors.darkNavyBg,
                     child: Icon(
                       CupertinoIcons.person_fill,
                       color: AppColors.neonTurquoise,
@@ -151,7 +151,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 activeThumbColor: AppColors.neonTurquoise,
                 title: Row(
                   children: [
-                    const Icon(
+                    Icon(
                       CupertinoIcons.moon_fill,
                       color: AppColors.neonTurquoise,
                     ),
@@ -185,7 +185,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   Expanded(
                     child: Row(
                       children: [
-                        const Icon(
+                        Icon(
                           CupertinoIcons.globe,
                           color: AppColors.neonTurquoise,
                         ),

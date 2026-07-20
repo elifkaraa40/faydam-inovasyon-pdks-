@@ -3,7 +3,7 @@ import 'package:flutter/cupertino.dart';
 import 'app_provider.dart';
 import 'home_screen.dart';
 import 'mola_screen.dart';
-import 'qr_screen.dart';
+import 'qr_screen.dart' hide AppColors;
 import 'izin_screen.dart';
 import 'profile_screen.dart';
 

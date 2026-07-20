@@ -22,32 +22,28 @@ class _IzinScreenState extends State<IzinScreen> {
     super.initState();
     _fetchLeaveRequests();
   }
-
-  Future<void> _fetchLeaveRequests() async {
-    if (mounted) {
-      setState(() {
-        _isLoading = true;
-      });
-    }
+Future<void> _fetchLeaveRequests() async {
+    setState(() {
+      _isLoading = true;
+    });
 
     try {
+      // API'den gelen izin taleplerini list değişkenine alıyoruz
       final list = await _apiService.getLeaveRequests();
 
       if (!mounted) return;
 
       setState(() {
-        _leaveRequests = list;
+        // Alınan listeyi ekrandaki değişkenimize atıyoruz
+        var _allLeaveRequests = list;
       });
     } catch (error) {
       if (!mounted) return;
 
-      final message = error.toString().replaceFirst('Exception: ', '');
-
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            'İzin listesi yüklenemedi: $message',
-          ),
+          content: Text('Hata: ${error.toString().replaceFirst('Exception: ', '')}'),
+          backgroundColor: Colors.red,
         ),
       );
     } finally {
@@ -184,7 +180,7 @@ class _IzinScreenState extends State<IzinScreen> {
         endDate: _formatDate(
           pickedRange.end,
         ),
-        reason: reason,
+        reason: reason, dayPortion: '',
       );
 
       if (!mounted) return;

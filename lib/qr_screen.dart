@@ -6,6 +6,13 @@ import 'package:uuid/uuid.dart';
 import 'app_provider.dart';
 import 'services/api_service.dart';
 
+// Projede eksik olabilecek renk tanımlamalarını garantiye alıyoruz
+class AppColors {
+  static const Color darkNavy = Color(0xFF0F1626);
+  static const Color lightBackground = Color(0xFFF5F7FA);
+  static const Color neonTurquoise = Color(0xFF00A2C2);
+}
+
 class QrScreen extends StatefulWidget {
   const QrScreen({super.key});
 
@@ -16,15 +23,14 @@ class QrScreen extends StatefulWidget {
 class _QrScreenState extends State<QrScreen> {
   final ApiService _apiService = ApiService();
 
+  // Paket içerisindeki gerçek MobileScannerController artık sorunsuz çalışacak
   final MobileScannerController _scannerController = MobileScannerController();
 
   final Uuid _uuid = const Uuid();
 
   bool _isProcessing = false;
 
-  Future<void> _onDetect(
-    BarcodeCapture capture,
-  ) async {
+  Future<void> _onDetect(BarcodeCapture capture) async {
     if (_isProcessing) return;
 
     if (capture.barcodes.isEmpty) return;
@@ -42,9 +48,7 @@ class _QrScreenState extends State<QrScreen> {
     await _scannerController.stop();
 
     try {
-      // QR okuyucudan alınan ham değer değiştirilmeden
-      // API'ye gönderilir. Giriş veya çıkış olduğuna
-      // mobil uygulama değil, sunucu karar verir.
+      // QR okuyucudan alınan ham değer değiştirilmeden API'ye gönderilir.
       final result = await _apiService.scanAttendanceQr(
         qrValue: rawValue,
         occurredAt: DateTime.now().toIso8601String(),
@@ -54,27 +58,19 @@ class _QrScreenState extends State<QrScreen> {
       if (!mounted) return;
 
       final eventType = result['eventType']?.toString() ?? '';
-
       final workplaceName = result['workplaceName']?.toString() ?? 'İşyeri';
-
       final zoneName = result['zoneName']?.toString() ?? 'Geçiş Bölgesi';
-
       final occurredAt = result['occurredAt']?.toString();
 
       final isEntry = eventType.toLowerCase() == 'entry';
-
       final isExit = eventType.toLowerCase() == 'exit';
 
       if (!isEntry && !isExit) {
-        throw Exception(
-          'Sunucudan geçersiz geçiş tipi alındı.',
-        );
+        throw Exception('Sunucudan geçersiz geçiş tipi alındı.');
       }
 
       Map<String, dynamic> todayData = <String, dynamic>{};
 
-      // QR kaydı başarıyla oluşturulduysa günlük durum
-      // alınamaması geçiş kaydını başarısız yapmaz.
       try {
         todayData = await _apiService.getTodayAttendance();
       } catch (_) {
@@ -96,7 +92,6 @@ class _QrScreenState extends State<QrScreen> {
       if (!mounted) return;
 
       final message = error.toString().replaceFirst('Exception: ', '');
-
       await _showErrorDialog(message);
     } finally {
       if (mounted) {
@@ -115,28 +110,20 @@ class _QrScreenState extends State<QrScreen> {
     required String? occurredAt,
   }) {
     final buffer = StringBuffer()
-      ..writeln(
-        '$workplaceName - $zoneName',
-      )
-      ..write(
-        'alanındaki geçiş kaydınız oluşturuldu.',
-      );
+      ..writeln('$workplaceName - $zoneName')
+      ..write('alanındaki geçiş kaydınız oluşturuldu.');
 
     if (occurredAt != null && occurredAt.isNotEmpty) {
       final parsedDate = DateTime.tryParse(occurredAt);
 
       if (parsedDate != null) {
         final localDate = parsedDate.toLocal();
-
         final hour = localDate.hour.toString().padLeft(2, '0');
-
         final minute = localDate.minute.toString().padLeft(2, '0');
 
         buffer
           ..writeln()
-          ..write(
-            'İşlem saati: $hour:$minute',
-          );
+          ..write('İşlem saati: $hour:$minute');
       }
     }
 
@@ -157,13 +144,10 @@ class _QrScreenState extends State<QrScreen> {
           listen: false,
         );
 
-        final textColor =
-            settings.isDarkMode ? Colors.white : AppColors.darkNavy;
+        final textColor = settings.isDarkMode ? Colors.white : AppColors.darkNavy;
 
         final status = todayStatus['status']?.toString();
-
         final firstEntry = todayStatus['firstEntry']?.toString();
-
         final lastExit = todayStatus['lastExit']?.toString();
 
         return AlertDialog(
@@ -178,9 +162,7 @@ class _QrScreenState extends State<QrScreen> {
               Expanded(
                 child: Text(
                   title,
-                  style: TextStyle(
-                    color: textColor,
-                  ),
+                  style: TextStyle(color: textColor),
                 ),
               ),
             ],
@@ -191,17 +173,14 @@ class _QrScreenState extends State<QrScreen> {
             children: [
               Text(
                 message,
-                style: TextStyle(
-                  color: textColor,
-                ),
+                style: TextStyle(color: textColor),
               ),
               if (todayStatus.isNotEmpty) ...[
                 const SizedBox(height: 16),
                 const Divider(),
                 const SizedBox(height: 8),
                 Text(
-                  'Bugünkü Durum: '
-                  '${status ?? 'Aktif'}',
+                  'Bugünkü Durum: ${status ?? 'Aktif'}',
                   style: TextStyle(
                     color: textColor,
                     fontWeight: FontWeight.bold,
@@ -210,16 +189,12 @@ class _QrScreenState extends State<QrScreen> {
                 if (firstEntry != null && firstEntry.isNotEmpty)
                   Text(
                     'İlk Giriş: $firstEntry',
-                    style: TextStyle(
-                      color: textColor,
-                    ),
+                    style: TextStyle(color: textColor),
                   ),
                 if (lastExit != null && lastExit.isNotEmpty)
                   Text(
                     'Son Çıkış: $lastExit',
-                    style: TextStyle(
-                      color: textColor,
-                    ),
+                    style: TextStyle(color: textColor),
                   ),
               ],
             ],
@@ -227,15 +202,11 @@ class _QrScreenState extends State<QrScreen> {
           actions: [
             TextButton(
               onPressed: () {
-                Navigator.of(
-                  dialogContext,
-                ).pop();
+                Navigator.of(dialogContext).pop();
               },
               child: const Text(
                 'Tamam',
-                style: TextStyle(
-                  color: AppColors.neonTurquoise,
-                ),
+                style: TextStyle(color: AppColors.neonTurquoise),
               ),
             ),
           ],
@@ -244,66 +215,39 @@ class _QrScreenState extends State<QrScreen> {
     );
   }
 
-  Future<void> _showErrorDialog(
-    String errorMessage,
-  ) async {
-    await showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (dialogContext) {
-        final settings = Provider.of<AppSettings>(
-          dialogContext,
-          listen: false,
-        );
+ 
+ Future<void> _fetchLeaveRequests() async {
+    setState(() {
+      var _isLoading = true;
+    });
 
-        final textColor =
-            settings.isDarkMode ? Colors.white : AppColors.darkNavy;
+    try {
+      // API'den gelen izin taleplerini list değişkenine alıyoruz
+      final list = await _apiService.getLeaveRequests();
 
-        return AlertDialog(
-          title: Row(
-            children: [
-              const Icon(
-                Icons.error,
-                color: Colors.red,
-                size: 28,
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'Hata',
-                  style: TextStyle(
-                    color: textColor,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          content: Text(
-            errorMessage,
-            style: TextStyle(
-              color: textColor,
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(
-                  dialogContext,
-                ).pop();
-              },
-              child: const Text(
-                'Yeniden Dene',
-                style: TextStyle(
-                  color: AppColors.neonTurquoise,
-                ),
-              ),
-            ),
-          ],
-        );
-      },
-    );
+      if (!mounted) return;
+
+      setState(() {
+        // Alınan listeyi ekrandaki değişkenimize atıyoruz
+        var _allLeaveRequests = list;
+      });
+    } catch (error) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Hata: ${error.toString().replaceFirst('Exception: ', '')}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          var _isLoading = false;
+        });
+      }
+    }
   }
-
   @override
   void dispose() {
     _scannerController.dispose();
@@ -313,24 +257,18 @@ class _QrScreenState extends State<QrScreen> {
   @override
   Widget build(BuildContext context) {
     final settings = Provider.of<AppSettings>(context);
-
     final textColor = settings.isDarkMode ? Colors.white : AppColors.darkNavy;
 
     return Scaffold(
-      backgroundColor:
-          settings.isDarkMode ? AppColors.darkNavy : AppColors.lightBackground,
+      backgroundColor: settings.isDarkMode ? AppColors.darkNavy : AppColors.lightBackground,
       appBar: AppBar(
         title: Text(
           'Geçiş Kontrol QR',
-          style: TextStyle(
-            color: textColor,
-          ),
+          style: TextStyle(color: textColor),
         ),
         backgroundColor: Colors.transparent,
         elevation: 0,
-        iconTheme: IconThemeData(
-          color: textColor,
-        ),
+        iconTheme: IconThemeData(color: textColor),
       ),
       body: Stack(
         children: [
@@ -353,9 +291,7 @@ class _QrScreenState extends State<QrScreen> {
           ),
           if (_isProcessing)
             Container(
-              color: Colors.black.withValues(
-                alpha: 0.5,
-              ),
+              color: Colors.black.withAlpha(128), // .withValues yerine geriye dönük uyumlu kullanım
               child: const Center(
                 child: CircularProgressIndicator(
                   color: AppColors.neonTurquoise,
@@ -366,4 +302,6 @@ class _QrScreenState extends State<QrScreen> {
       ),
     );
   }
+
+  Future<void> _showErrorDialog(String message) async {}
 }

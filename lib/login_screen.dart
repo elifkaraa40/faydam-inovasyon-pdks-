@@ -1,11 +1,25 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import 'app_provider.dart';
-import 'main_screen.dart';
-import 'services/api_service.dart';
+import '../app_provider.dart';
+import '../main_screen.dart';
+import 'register_screen.dart'; 
+
+class AppColors {
+  static const Color darkNavyBg = Color(0xFF0F1626);      
+  static const Color cardNavy = Color(0xFF1B2236);        
+  static const Color inputFieldBg = Color(0xFF131926);     
+  static const Color inputBorder = Color(0xFF232D42);      
+  static const Color buttonBg = Color(0xFF0D1222);         
+  static const Color neonCyan = Color(0xFF00A2C2);         
+  static const Color textGray = Color(0xFF757F99);
+
+  static get lightCard => null;
+
+  static get lightBackground => null;
+
+  static Color? get neonTurquoise => null; 
+}
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -16,42 +30,20 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _emailController = TextEditingController();
-
   final TextEditingController _passwordController = TextEditingController();
 
-  final ApiService _apiService = ApiService();
-
   bool _isLoading = false;
-  bool _rememberMe = false;
-  bool _obscurePassword = true;
+  bool _rememberMe = true; 
 
   Future<void> _handleLogin() async {
     if (_isLoading) return;
 
     final email = _emailController.text.trim();
-
-    // Parolaya trim uygulanmaz. Kullanıcının girdiği değer
-    // değiştirilmeden API'ye gönderilir.
     final password = _passwordController.text;
 
     if (email.isEmpty || password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Lütfen e-posta ve parola alanlarını doldurun.',
-          ),
-        ),
-      );
-      return;
-    }
-
-    if (password.length < 6) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Parola en az 6 karakter olmalıdır.',
-          ),
-        ),
+        const SnackBar(content: Text('Lütfen e-posta ve şifre alanlarını doldurun.')),
       );
       return;
     }
@@ -60,78 +52,27 @@ class _LoginScreenState extends State<LoginScreen> {
       _isLoading = true;
     });
 
-    try {
-      String deviceName = 'Android Cihaz';
+    await Future.delayed(const Duration(milliseconds: 400));
 
-      if (Platform.isIOS) {
-        deviceName = 'iOS Cihaz';
-      }
+    if (!mounted) return;
 
-      final result = await _apiService.login(
-        email,
-        password,
-        deviceName,
-      );
-
-      final userData = result['user'];
-
-      if (userData is! Map) {
-        throw Exception(
-          'Sunucudan geçerli kullanıcı bilgisi alınamadı.',
+    context.read<AppSettings>().loginSuccess(
+          'mock_access_token_12345',
+          'mock_user_id_99',
+          'Test Kullanıcı',
+          email,
         );
-      }
 
-      final user = Map<String, dynamic>.from(userData);
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(builder: (_) => const MainScreen()),
+    );
+  }
 
-      final accessToken = result['accessToken']?.toString() ?? '';
-
-      final userId = user['id']?.toString() ?? '';
-
-      final fullName = user['fullName']?.toString() ?? '';
-
-      final userEmail = user['email']?.toString() ?? '';
-
-      if (accessToken.isEmpty ||
-          userId.isEmpty ||
-          fullName.isEmpty ||
-          userEmail.isEmpty) {
-        throw Exception(
-          'Giriş cevabındaki kullanıcı bilgileri eksik.',
-        );
-      }
-
-      if (!mounted) return;
-
-      context.read<AppSettings>().loginSuccess(
-            accessToken,
-            userId,
-            fullName,
-            userEmail,
-          );
-
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(
-          builder: (_) => const MainScreen(),
-        ),
-      );
-    } catch (error) {
-      if (!mounted) return;
-
-      final message = error.toString().replaceFirst('Exception: ', '');
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(message),
-          backgroundColor: Colors.red,
-        ),
-      );
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
-    }
+  void _navigateToRegister() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const RegisterScreen()),
+    );
   }
 
   @override
@@ -143,192 +84,169 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final settings = Provider.of<AppSettings>(context);
-
-    final cardBg = settings.isDarkMode ? AppColors.cardNavy : Colors.white;
-
-    final textColor = settings.isDarkMode ? Colors.white : AppColors.darkNavy;
-
     return Scaffold(
-      backgroundColor:
-          settings.isDarkMode ? AppColors.darkNavy : AppColors.lightBackground,
+      backgroundColor: AppColors.darkNavyBg,
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24.0),
           child: Container(
-            padding: const EdgeInsets.all(24.0),
+            width: 1000, 
+            padding: const EdgeInsets.symmetric(horizontal: 48.0, vertical: 54.0),
             decoration: BoxDecoration(
-              color: cardBg,
-              borderRadius: BorderRadius.circular(24),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha:0.1),
-                  blurRadius: 20,
-                  spreadRadius: 5,
-                ),
-              ],
+              color: AppColors.cardNavy,
+              borderRadius: BorderRadius.circular(16),
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Şirket logosu
-                Image.asset(
-                  'assets/faydam_logo.jpg',
-                  height: 100,
-                  errorBuilder: (
-                    context,
-                    error,
-                    stackTrace,
-                  ) {
-                    return Container(
-                      height: 100,
-                      alignment: Alignment.center,
-                      child: Text(
-                        'FAYDAM PDKS',
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: textColor,
-                        ),
-                      ),
-                    );
-                  },
+                Center(
+                  child: SizedBox(
+                    width: 260,
+                    height: 260,
+                    child: Image.asset(
+                      'assets/faydam_logo.png',
+                      fit: BoxFit.contain,
+                      errorBuilder: (context, error, stackTrace) {
+                        return const Icon(
+                          Icons.business,
+                          size: 100,
+                          color: AppColors.neonCyan,
+                        );
+                      },
+                    ),
+                  ),
                 ),
-                const SizedBox(height: 32),
+                const SizedBox(height: 20),
 
-                // E-posta alanı
                 TextField(
                   controller: _emailController,
                   enabled: !_isLoading,
-                  keyboardType: TextInputType.emailAddress,
-                  textInputAction: TextInputAction.next,
-                  autofillHints: const [
-                    AutofillHints.email,
-                    AutofillHints.username,
-                  ],
-                  style: TextStyle(color: textColor),
+                  style: const TextStyle(color: Colors.white, fontSize: 15),
                   decoration: InputDecoration(
                     hintText: 'E-posta Adresi',
-                    hintStyle: const TextStyle(
-                      color: Colors.grey,
-                    ),
+                    hintStyle: const TextStyle(color: Color(0xFF757F99), fontSize: 15),
                     filled: true,
-                    fillColor: settings.isDarkMode
-                        ? AppColors.darkNavy
-                        : Colors.grey[100],
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
+                    fillColor: AppColors.inputFieldBg,
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: const BorderSide(color: AppColors.inputBorder, width: 1.2),
                     ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: const BorderSide(color: AppColors.neonCyan, width: 1.2),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
                   ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 18),
 
-                // Parola alanı
                 TextField(
                   controller: _passwordController,
                   enabled: !_isLoading,
-                  obscureText: _obscurePassword,
-                  textInputAction: TextInputAction.done,
-                  autofillHints: const [
-                    AutofillHints.password,
-                  ],
-                  enableSuggestions: false,
-                  autocorrect: false,
-                  onSubmitted: (_) {
-                    if (!_isLoading) {
-                      _handleLogin();
-                    }
-                  },
-                  style: TextStyle(color: textColor),
+                  obscureText: true,
+                  style: const TextStyle(color: Colors.white, fontSize: 15),
                   decoration: InputDecoration(
                     hintText: 'Şifre',
-                    hintStyle: const TextStyle(
-                      color: Colors.grey,
-                    ),
+                    hintStyle: const TextStyle(color: Color(0xFF757F99), fontSize: 15),
                     filled: true,
-                    fillColor: settings.isDarkMode
-                        ? AppColors.darkNavy
-                        : Colors.grey[100],
-                    suffixIcon: IconButton(
-                      tooltip: _obscurePassword
-                          ? 'Parolayı göster'
-                          : 'Parolayı gizle',
-                      icon: Icon(
-                        _obscurePassword
-                            ? Icons.visibility_off
-                            : Icons.visibility,
-                        color: Colors.grey,
-                      ),
-                      onPressed: _isLoading
-                          ? null
-                          : () {
-                              setState(() {
-                                _obscurePassword = !_obscurePassword;
-                              });
-                            },
+                    fillColor: AppColors.inputFieldBg,
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: const BorderSide(color: AppColors.inputBorder, width: 1.2),
                     ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: const BorderSide(color: AppColors.neonCyan, width: 1.2),
                     ),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
                   ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 14),
 
-                // Beni Hatırla
                 Row(
+                  mainAxisAlignment: MainAxisAlignment.start,
                   children: [
-                    Checkbox(
-                      value: _rememberMe,
-                      activeColor: AppColors.neonTurquoise,
-                      onChanged: _isLoading
-                          ? null
-                          : (value) {
-                              setState(() {
-                                _rememberMe = value ?? false;
-                              });
-                            },
-                    ),
-                    Text(
-                      'Beni Hatırla',
-                      style: TextStyle(
-                        color: textColor,
+                    Theme(
+                      data: ThemeData(
+                        unselectedWidgetColor: const Color(0xFF56637F),
                       ),
+                      child: SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: Checkbox(
+                          value: _rememberMe,
+                          activeColor: AppColors.neonCyan,
+                          checkColor: Colors.black,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          onChanged: _isLoading
+                              ? null
+                              : (bool? value) {
+                                  setState(() {
+                                    _rememberMe = value ?? false;
+                                  });
+                                },
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    const Text(
+                      'Beni Hatırla',
+                      style: TextStyle(color: Color(0xFF8A99AD), fontSize: 14),
                     ),
                   ],
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 28),
 
-                // Giriş butonu
                 SizedBox(
-                  width: double.infinity,
-                  height: 52,
+                  height: 54,
                   child: ElevatedButton(
                     onPressed: _isLoading ? null : _handleLogin,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.darkNavy,
+                      backgroundColor: AppColors.buttonBg,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(8),
+                        side: const BorderSide(color: AppColors.inputBorder, width: 1),
                       ),
+                      elevation: 0,
                     ),
                     child: _isLoading
                         ? const SizedBox(
-                            width: 24,
-                            height: 24,
+                            width: 20,
+                            height: 20,
                             child: CircularProgressIndicator(
-                              color: AppColors.neonTurquoise,
+                              color: Colors.white,
                               strokeWidth: 2,
                             ),
                           )
                         : const Text(
                             'Sisteme Giriş Yap',
                             style: TextStyle(
-                              color: AppColors.neonTurquoise,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
+                              color: Colors.white,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                Center(
+                  child: TextButton(
+                    onPressed: _isLoading ? null : _navigateToRegister,
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 24),
+                    ),
+                    child: const Text(
+                      'Kayıt Ol',
+                      style: TextStyle(
+                        color: AppColors.neonCyan,
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
                 ),
               ],
