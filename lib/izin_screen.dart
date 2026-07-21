@@ -22,7 +22,8 @@ class _IzinScreenState extends State<IzinScreen> {
     super.initState();
     _fetchLeaveRequests();
   }
-Future<void> _fetchLeaveRequests() async {
+
+  Future<void> _fetchLeaveRequests() async {
     setState(() {
       _isLoading = true;
     });
@@ -34,15 +35,15 @@ Future<void> _fetchLeaveRequests() async {
       if (!mounted) return;
 
       setState(() {
-        // Alınan listeyi ekrandaki değişkenimize atıyoruz
-        var _allLeaveRequests = list;
+        _leaveRequests = list;
       });
     } catch (error) {
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Hata: ${error.toString().replaceFirst('Exception: ', '')}'),
+          content:
+              Text('Hata: ${error.toString().replaceFirst('Exception: ', '')}'),
           backgroundColor: Colors.red,
         ),
       );
@@ -113,15 +114,43 @@ Future<void> _fetchLeaveRequests() async {
 
     if (!mounted || selectedType == null) return;
 
-    final pickedRange = await showDateRangePicker(
+    final durationType = await showDialog<String>(
       context: context,
-      firstDate: DateTime.now(),
-      lastDate: DateTime.now().add(
-        const Duration(days: 365),
+      builder: (dialogContext) => SimpleDialog(
+        title: const Text('İzin Süresi'),
+        children: [
+          SimpleDialogOption(
+            onPressed: () => Navigator.pop(dialogContext, 'single'),
+            child: const Text('Tek Günlük İzin'),
+          ),
+          SimpleDialogOption(
+            onPressed: () => Navigator.pop(dialogContext, 'range'),
+            child: const Text('Birden Fazla Gün'),
+          ),
+        ],
       ),
     );
 
-    if (!mounted || pickedRange == null) return;
+    if (!mounted || durationType == null) return;
+
+    late DateTimeRange pickedRange;
+    if (durationType == 'single') {
+      final pickedDate = await showDatePicker(
+        context: context,
+        firstDate: DateTime.now(),
+        lastDate: DateTime.now().add(const Duration(days: 365)),
+      );
+      if (!mounted || pickedDate == null) return;
+      pickedRange = DateTimeRange(start: pickedDate, end: pickedDate);
+    } else {
+      final range = await showDateRangePicker(
+        context: context,
+        firstDate: DateTime.now(),
+        lastDate: DateTime.now().add(const Duration(days: 365)),
+      );
+      if (!mounted || range == null) return;
+      pickedRange = range;
+    }
 
     final reasonController = TextEditingController();
 
@@ -180,7 +209,8 @@ Future<void> _fetchLeaveRequests() async {
         endDate: _formatDate(
           pickedRange.end,
         ),
-        reason: reason, dayPortion: '',
+        reason: reason,
+        dayPortion: 'FullDay',
       );
 
       if (!mounted) return;

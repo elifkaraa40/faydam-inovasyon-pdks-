@@ -64,8 +64,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
         : 'E-posta bilgisi bulunamadı';
 
     return Scaffold(
-      backgroundColor:
-          settings.isDarkMode ? AppColors.darkNavyBg : AppColors.lightBackground,
+      backgroundColor: settings.isDarkMode
+          ? AppColors.darkNavyBg
+          : AppColors.lightBackground,
       appBar: AppBar(
         title: const Text(
           'Profilim',
@@ -93,7 +94,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
               child: Row(
                 children: [
-                  CircleAvatar(
+                  const CircleAvatar(
                     radius: 30,
                     backgroundColor: AppColors.darkNavyBg,
                     child: Icon(
@@ -151,7 +152,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 activeThumbColor: AppColors.neonTurquoise,
                 title: Row(
                   children: [
-                    Icon(
+                    const Icon(
                       CupertinoIcons.moon_fill,
                       color: AppColors.neonTurquoise,
                     ),
@@ -185,7 +186,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   Expanded(
                     child: Row(
                       children: [
-                        Icon(
+                        const Icon(
                           CupertinoIcons.globe,
                           color: AppColors.neonTurquoise,
                         ),

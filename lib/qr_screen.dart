@@ -144,7 +144,8 @@ class _QrScreenState extends State<QrScreen> {
           listen: false,
         );
 
-        final textColor = settings.isDarkMode ? Colors.white : AppColors.darkNavy;
+        final textColor =
+            settings.isDarkMode ? Colors.white : AppColors.darkNavy;
 
         final status = todayStatus['status']?.toString();
         final firstEntry = todayStatus['firstEntry']?.toString();
@@ -215,39 +216,6 @@ class _QrScreenState extends State<QrScreen> {
     );
   }
 
- 
- Future<void> _fetchLeaveRequests() async {
-    setState(() {
-      var _isLoading = true;
-    });
-
-    try {
-      // API'den gelen izin taleplerini list değişkenine alıyoruz
-      final list = await _apiService.getLeaveRequests();
-
-      if (!mounted) return;
-
-      setState(() {
-        // Alınan listeyi ekrandaki değişkenimize atıyoruz
-        var _allLeaveRequests = list;
-      });
-    } catch (error) {
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Hata: ${error.toString().replaceFirst('Exception: ', '')}'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    } finally {
-      if (mounted) {
-        setState(() {
-          var _isLoading = false;
-        });
-      }
-    }
-  }
   @override
   void dispose() {
     _scannerController.dispose();
@@ -260,7 +228,8 @@ class _QrScreenState extends State<QrScreen> {
     final textColor = settings.isDarkMode ? Colors.white : AppColors.darkNavy;
 
     return Scaffold(
-      backgroundColor: settings.isDarkMode ? AppColors.darkNavy : AppColors.lightBackground,
+      backgroundColor:
+          settings.isDarkMode ? AppColors.darkNavy : AppColors.lightBackground,
       appBar: AppBar(
         title: Text(
           'Geçiş Kontrol QR',
@@ -291,7 +260,8 @@ class _QrScreenState extends State<QrScreen> {
           ),
           if (_isProcessing)
             Container(
-              color: Colors.black.withAlpha(128), // .withValues yerine geriye dönük uyumlu kullanım
+              color: Colors.black.withAlpha(
+                  128), // .withValues yerine geriye dönük uyumlu kullanım
               child: const Center(
                 child: CircularProgressIndicator(
                   color: AppColors.neonTurquoise,
