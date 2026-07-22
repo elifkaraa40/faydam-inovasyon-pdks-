@@ -1,8 +1,12 @@
+// ignore_for_file: unused_import
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:intl/date_symbol_data_local.dart';
 
 import 'app_provider.dart';
 import 'session_gate.dart';
+
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
