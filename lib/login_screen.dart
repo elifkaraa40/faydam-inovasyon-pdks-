@@ -4,6 +4,8 @@ import 'package:provider/provider.dart';
 import 'app_provider.dart';
 import 'auth_ui.dart';
 import 'main_screen.dart';
+import 'manager_main_screen.dart';
+import 'approval_pending_screen.dart';
 import 'register_screen.dart';
 import 'services/api_service.dart';
 
@@ -44,9 +46,8 @@ class _LoginScreenState extends State<LoginScreen> {
       _emailError = email.isEmpty
           ? 'E-posta adresinizi girin.'
           : (!validEmail ? 'Geçerli bir e-posta adresi girin.' : null);
-      _passwordError = _passwordController.text.isEmpty
-          ? 'Parolanızı girin.'
-          : null;
+      _passwordError =
+          _passwordController.text.isEmpty ? 'Parolanızı girin.' : null;
     });
     if (_emailError != null) _emailFocus.requestFocus();
     if (_emailError == null && _passwordError != null) {
@@ -70,16 +71,27 @@ class _LoginScreenState extends State<LoginScreen> {
             user['id'].toString(),
             user['fullName'].toString(),
             user['email'].toString(),
+            user['role']?.toString() ?? 'Personel',
           );
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const MainScreen()),
+      final isActive = user['accountStatus']?.toString() == 'Active';
+      final isManager = user['role']?.toString().toLowerCase() == 'yonetici';
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(
+          builder: (_) => !isActive
+              ? const ApprovalPendingScreen()
+              : isManager
+                  ? const ManagerMainScreen()
+                  : const MainScreen(),
+        ),
+        (route) => false,
       );
     } catch (error) {
       if (!mounted) return;
       setState(() => _passwordError = error.toString());
       _passwordFocus.requestFocus();
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Giriş yapılamadı. Bilgilerinizi kontrol edin.')),
+        const SnackBar(
+            content: Text('Giriş yapılamadı. Bilgilerinizi kontrol edin.')),
       );
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -182,7 +194,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   ? null
                   : () => Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => const RegisterScreen()),
+                        MaterialPageRoute(
+                            builder: (_) => const RegisterScreen()),
                       ),
               child: const Text('Kayıt olun.'),
             ),

@@ -25,6 +25,7 @@ class AppSettings extends ChangeNotifier {
   String? _userId;
   String? _userName;
   String? _userEmail;
+  String? _userRole;
 
   bool get isDarkMode => _isDarkMode;
 
@@ -41,6 +42,10 @@ class AppSettings extends ChangeNotifier {
   String? get userName => _userName;
 
   String? get userEmail => _userEmail;
+
+  String? get userRole => _userRole;
+
+  bool get isManager => _userRole?.toLowerCase() == 'yonetici';
 
   bool get isLoggedIn {
     return _accessToken != null &&
@@ -70,11 +75,13 @@ class AppSettings extends ChangeNotifier {
     String userId,
     String userName,
     String email,
+    String role,
   ) {
     _accessToken = accessToken;
     _userId = userId;
     _userName = userName;
     _userEmail = email;
+    _userRole = role;
 
     notifyListeners();
   }
@@ -87,11 +94,13 @@ class AppSettings extends ChangeNotifier {
     required String userId,
     required String userName,
     required String email,
+    required String role,
   }) {
     _accessToken = accessToken;
     _userId = userId;
     _userName = userName;
     _userEmail = email;
+    _userRole = role;
 
     notifyListeners();
   }
@@ -101,6 +110,7 @@ class AppSettings extends ChangeNotifier {
     _userId = null;
     _userName = null;
     _userEmail = null;
+    _userRole = null;
 
     notifyListeners();
   }

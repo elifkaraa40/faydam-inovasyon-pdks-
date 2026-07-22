@@ -59,6 +59,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             user['id'].toString(),
             user['fullName'].toString(),
             user['email'].toString(),
+            user['role']?.toString() ?? 'Personel',
           );
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (_) => const ApprovalPendingScreen()),
@@ -95,7 +96,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
       children: [
         const AuthHeading(
           title: 'Hesabınızı oluşturun',
-          description: 'Faydam PDKS’ye erişmek için bilgilerinizi eksiksiz girin.',
+          description:
+              'Faydam PDKS’ye erişmek için bilgilerinizi eksiksiz girin.',
         ),
         TextField(
           controller: _fullNameController,
@@ -176,7 +178,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Flexible(
-              child: Text('Zaten hesabınız var mı?', style: TextStyle(color: bodyColor)),
+              child: Text('Zaten hesabınız var mı?',
+                  style: TextStyle(color: bodyColor)),
             ),
             TextButton(
               onPressed: _isLoading ? null : () => Navigator.of(context).pop(),

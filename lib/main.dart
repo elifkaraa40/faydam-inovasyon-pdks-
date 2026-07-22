@@ -7,7 +7,6 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'app_provider.dart';
 import 'session_gate.dart';
 
-
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -36,12 +35,14 @@ class MyApp extends StatelessWidget {
 
       theme: ThemeData(
         brightness: Brightness.light,
+        fontFamily: 'Arial',
         primarySwatch: Colors.blue,
         scaffoldBackgroundColor: const Color(0xFFF5F7FA),
       ),
 
       darkTheme: ThemeData(
         brightness: Brightness.dark,
+        fontFamily: 'Arial',
         primarySwatch: Colors.blue,
         scaffoldBackgroundColor: const Color(0xFF0F1626),
       ),

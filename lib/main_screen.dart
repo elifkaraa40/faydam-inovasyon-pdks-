@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
-import 'app_provider.dart';
+import 'attendance_screen.dart';
+import 'employee_actions_screen.dart';
 import 'home_screen.dart';
-import 'mola_screen.dart';
 import 'qr_screen.dart'; // Importumuz burada temizce dursun
-import 'izin_screen.dart';
 import 'profile_screen.dart';
 
 class MainScreen extends StatefulWidget {
@@ -20,9 +19,9 @@ class _MainScreenState extends State<MainScreen> {
   // Başlarındaki 'const' kelimelerini kaldırdık, hata vermesini engelledik!
   final List<Widget> _screens = [
     const HomeScreen(),
-    const MolaScreen(),
-    QrScreen(), // Kırmızı çizgi çeken yer artık özgür
-    const IzinScreen(),
+    const AttendanceScreen(),
+    const QrScreen(),
+    const EmployeeActionsScreen(),
     const ProfileScreen(),
   ];
 
@@ -42,11 +41,16 @@ class _MainScreenState extends State<MainScreen> {
           });
         },
         items: const [
-          BottomNavigationBarItem(icon: Icon(CupertinoIcons.home), label: 'Ana Sayfa'),
-          BottomNavigationBarItem(icon: Icon(CupertinoIcons.time), label: 'Mola'),
-          BottomNavigationBarItem(icon: Icon(CupertinoIcons.qrcode_viewfinder), label: 'QR Kod'),
-          BottomNavigationBarItem(icon: Icon(CupertinoIcons.calendar), label: 'İzin'),
-          BottomNavigationBarItem(icon: Icon(CupertinoIcons.person), label: 'Profilim'),
+          BottomNavigationBarItem(
+              icon: Icon(CupertinoIcons.home), label: 'Ana Sayfa'),
+          BottomNavigationBarItem(
+              icon: Icon(CupertinoIcons.time), label: 'Puantaj'),
+          BottomNavigationBarItem(
+              icon: Icon(CupertinoIcons.qrcode_viewfinder), label: 'QR Kod'),
+          BottomNavigationBarItem(
+              icon: Icon(CupertinoIcons.square_grid_2x2), label: 'İşlemler'),
+          BottomNavigationBarItem(
+              icon: Icon(CupertinoIcons.person), label: 'Profilim'),
         ],
       ),
     );

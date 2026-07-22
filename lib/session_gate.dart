@@ -5,6 +5,7 @@ import 'app_provider.dart';
 import 'approval_pending_screen.dart';
 import 'login_screen.dart';
 import 'main_screen.dart';
+import 'manager_main_screen.dart';
 import 'services/api_service.dart';
 
 class SessionGate extends StatefulWidget {
@@ -29,6 +30,7 @@ class _SessionGateState extends State<SessionGate> {
             userId: user['id']?.toString() ?? '',
             userName: user['fullName']?.toString() ?? '',
             email: user['email']?.toString() ?? '',
+            role: user['role']?.toString() ?? 'Personel',
           );
     }
 
@@ -36,7 +38,8 @@ class _SessionGateState extends State<SessionGate> {
     if (status['accountStatus'] == 'Active' &&
         status['canUseApplication'] == true) {
       await _apiService.refreshSession();
-      return const MainScreen();
+      final isManager = user['role']?.toString().toLowerCase() == 'yonetici';
+      return isManager ? const ManagerMainScreen() : const MainScreen();
     }
     return const ApprovalPendingScreen();
   }
