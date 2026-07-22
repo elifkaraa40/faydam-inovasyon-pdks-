@@ -1,5 +1,10 @@
 import 'package:flutter/material.dart';
-import 'login_screen.dart'; 
+import 'package:provider/provider.dart';
+
+import 'app_provider.dart';
+import 'approval_pending_screen.dart';
+import 'auth_ui.dart';
+import 'services/api_service.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -9,65 +14,67 @@ class RegisterScreen extends StatefulWidget {
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
-  final TextEditingController _fullNameController = TextEditingController();
-  final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _passwordController = TextEditingController();
+  final _fullNameController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _apiService = ApiService();
+
   bool _isLoading = false;
   bool _obscurePassword = true;
+  String? _fullNameError;
+  String? _emailError;
+  String? _passwordError;
 
-  // Kayıt bittikten sonra kullanıcıyı giriş ekranına yönlendiren fonksiyon
-  Future<void> _handleRegister() async {
+  bool _validate() {
     final fullName = _fullNameController.text.trim();
     final email = _emailController.text.trim();
     final password = _passwordController.text;
-
-    if (fullName.isEmpty || email.isEmpty || password.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Lütfen tüm alanları doldurun.')),
-      );
-      return;
-    }
-
-    if (password.length < 8 || password.length > 72) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Parola en az 8, en fazla 72 karakter olmalıdır.')),
-      );
-      return;
-    }
-
     setState(() {
-      _isLoading = true;
+      _fullNameError = fullName.isEmpty ? 'Ad soyad alanını doldurun.' : null;
+      _emailError = email.isEmpty ? 'E-posta adresinizi girin.' : null;
+      _passwordError = password.isEmpty
+          ? 'Parolanızı girin.'
+          : (password.length < 8 || password.length > 72
+              ? 'Parola en az 8, en fazla 72 karakter olmalıdır.'
+              : null);
     });
+    return _fullNameError == null &&
+        _emailError == null &&
+        _passwordError == null;
+  }
 
+  Future<void> _handleRegister() async {
+    if (_isLoading || !_validate()) return;
+    setState(() => _isLoading = true);
     try {
-      // API entegrasyonunu buraya bağlayabilirsin
-      await Future.delayed(const Duration(milliseconds: 1500)); 
-
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Kayıt başarıyla tamamlandı! Giriş yapabilirsiniz.'),
-          backgroundColor: Colors.green,
-        ),
+      final response = await _apiService.register(
+        fullName: _fullNameController.text.trim(),
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
       );
-
-      // Başarılı kayıttan sonra kullanıcıyı Giriş ekranına geri atar
+      if (!mounted) return;
+      final user = Map<String, dynamic>.from(response['user'] as Map);
+      context.read<AppSettings>().loginSuccess(
+            response['accessToken'].toString(),
+            user['id'].toString(),
+            user['fullName'].toString(),
+            user['email'].toString(),
+            user['role']?.toString() ?? 'Personel',
+          );
       Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (context) => const LoginScreen()),
+        MaterialPageRoute(builder: (_) => const ApprovalPendingScreen()),
         (route) => false,
       );
-    } catch (e) {
+    } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Hata oluştu: $e'), backgroundColor: Colors.red),
+        SnackBar(
+          content: Text('Hata oluştu: $error'),
+          backgroundColor: AuthColors.danger,
+        ),
       );
     } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -81,177 +88,106 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.darkNavyBg,
-      body: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
-          child: Container(
-            width: 450,
-            padding: const EdgeInsets.symmetric(horizontal: 36.0, vertical: 48.0),
-            decoration: BoxDecoration(
-              color: AppColors.cardNavy,
-              borderRadius: BorderRadius.circular(24),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.3),
-                  blurRadius: 30,
-                  offset: const Offset(0, 10),
-                ),
-              ],
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Geri dön tuşu
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: IconButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(Icons.arrow_back, color: Colors.white),
-                  ),
-                ),
-                const SizedBox(height: 12),
-
-                const Text(
-                  'Yeni Hesap Oluştur',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 26,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Faydam PDKS sistemine kayıt olun.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Colors.grey,
-                    fontSize: 14,
-                  ),
-                ),
-                const SizedBox(height: 32),
-
-                // Ad Soyad Alanı
-                TextField(
-                  controller: _fullNameController,
-                  enabled: !_isLoading,
-                  textCapitalization: TextCapitalization.words,
-                  style: const TextStyle(color: Colors.white),
-                  decoration: InputDecoration(
-                    hintText: 'Ad Soyad',
-                    hintStyle: const TextStyle(color: Colors.grey),
-                    prefixIcon: const Icon(Icons.person_outline, color: Colors.grey),
-                    filled: true,
-                    fillColor: AppColors.inputFieldBg,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(vertical: 18),
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // E-posta Alanı
-                TextField(
-                  controller: _emailController,
-                  enabled: !_isLoading,
-                  keyboardType: TextInputType.emailAddress,
-                  style: const TextStyle(color: Colors.white),
-                  decoration: InputDecoration(
-                    hintText: 'E-posta adresi',
-                    hintStyle: const TextStyle(color: Colors.grey),
-                    prefixIcon: const Icon(Icons.email_outlined, color: Colors.grey),
-                    filled: true,
-                    fillColor: AppColors.inputFieldBg,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(vertical: 18),
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // Parola Alanı
-                TextField(
-                  controller: _passwordController,
-                  enabled: !_isLoading,
-                  obscureText: _obscurePassword,
-                  style: const TextStyle(color: Colors.white),
-                  decoration: InputDecoration(
-                    hintText: 'Parola',
-                    hintStyle: const TextStyle(color: Colors.grey),
-                    prefixIcon: const Icon(Icons.lock_outline, color: Colors.grey),
-                    filled: true,
-                    fillColor: AppColors.inputFieldBg,
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        _obscurePassword ? Icons.visibility_off : Icons.visibility,
-                        color: Colors.grey,
+    final bodyColor = Theme.of(context).brightness == Brightness.dark
+        ? const Color(0xFFE2E8F0)
+        : AuthColors.navy;
+    return AuthShell(
+      logoWidth: 220,
+      children: [
+        const AuthHeading(
+          title: 'Hesabınızı oluşturun',
+          description:
+              'Faydam PDKS’ye erişmek için bilgilerinizi eksiksiz girin.',
+        ),
+        TextField(
+          controller: _fullNameController,
+          enabled: !_isLoading,
+          textCapitalization: TextCapitalization.words,
+          textInputAction: TextInputAction.next,
+          autofillHints: const [AutofillHints.name],
+          onChanged: (_) {
+            if (_fullNameError != null) setState(() => _fullNameError = null);
+          },
+          decoration: authInputDecoration(
+            context,
+            label: 'Ad Soyad',
+            hint: 'Adınızı ve soyadınızı girin',
+            errorText: _fullNameError,
+          ),
+        ),
+        const SizedBox(height: 18),
+        TextField(
+          controller: _emailController,
+          enabled: !_isLoading,
+          keyboardType: TextInputType.emailAddress,
+          textInputAction: TextInputAction.next,
+          autofillHints: const [AutofillHints.email],
+          onChanged: (_) {
+            if (_emailError != null) setState(() => _emailError = null);
+          },
+          decoration: authInputDecoration(
+            context,
+            label: 'E-posta',
+            hint: 'ornek@faydam.com',
+            errorText: _emailError,
+          ),
+        ),
+        const SizedBox(height: 18),
+        TextField(
+          controller: _passwordController,
+          enabled: !_isLoading,
+          obscureText: _obscurePassword,
+          textInputAction: TextInputAction.done,
+          autofillHints: const [AutofillHints.newPassword],
+          onChanged: (_) {
+            if (_passwordError != null) setState(() => _passwordError = null);
+          },
+          onSubmitted: (_) => _handleRegister(),
+          decoration: authInputDecoration(
+            context,
+            label: 'Parola',
+            hint: 'Parolanızı girin',
+            errorText: _passwordError,
+            suffixIcon: IconButton(
+              tooltip: _obscurePassword ? 'Parolayı göster' : 'Parolayı gizle',
+              onPressed: _isLoading
+                  ? null
+                  : () => setState(
+                        () => _obscurePassword = !_obscurePassword,
                       ),
-                      onPressed: () {
-                        setState(() {
-                          _obscurePassword = !_obscurePassword;
-                        });
-                      },
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(vertical: 18),
-                  ),
-                ),
-                const SizedBox(height: 32),
-
-                // Kayıt Ol Butonu
-                SizedBox(
-                  height: 52,
-                  child: ElevatedButton(
-                    onPressed: _isLoading ? null : _handleRegister,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.neonTurquoise,
-                      foregroundColor: Colors.black,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: _isLoading
-                        ? const SizedBox(
-                            width: 24,
-                            height: 24,
-                            child: CircularProgressIndicator(
-                              color: Colors.black,
-                              strokeWidth: 2,
-                            ),
-                          )
-                        : const Text(
-                            'Kayıt Ol',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: Text(
-                    'Zaten hesabınız var mı? Giriş Yap',
-                    style: TextStyle(color: AppColors.neonTurquoise),
-                  ),
-                ),
-              ],
+              icon: Icon(
+                _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                color: AuthColors.secondary,
+              ),
             ),
           ),
         ),
-      ),
+        const SizedBox(height: 8),
+        const Text(
+          'Parola 8–72 karakter uzunluğunda olmalıdır.',
+          style: TextStyle(color: AuthColors.secondary, fontSize: 12),
+        ),
+        const SizedBox(height: 24),
+        GradientButton(
+          label: 'Kayıt ol',
+          loading: _isLoading,
+          onPressed: _isLoading ? null : _handleRegister,
+        ),
+        const SizedBox(height: 18),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Flexible(
+              child: Text('Zaten hesabınız var mı?',
+                  style: TextStyle(color: bodyColor)),
+            ),
+            TextButton(
+              onPressed: _isLoading ? null : () => Navigator.of(context).pop(),
+              child: const Text('Giriş yapın.'),
+            ),
+          ],
+        ),
+      ],
     );
   }
 }

@@ -1,13 +1,15 @@
+// ignore_for_file: unused_import
+
 import 'package:flutter/material.dart';
-import 'package:ilk_mobil_uygulamam/login_screen.dart' show LoginScreen;
 import 'package:provider/provider.dart';
+import 'package:intl/date_symbol_data_local.dart';
 
 import 'app_provider.dart';
-import 'screens/login_screen.dart';
+import 'session_gate.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   runApp(
     ChangeNotifierProvider(
       create: (_) => AppSettings(),
@@ -27,24 +29,25 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'İlk Mobil Uygulamam',
       debugShowCheckedModeBanner: false,
-      
+
       // Karanlık ve Aydınlık Tema Ayarları
       themeMode: settings.isDarkMode ? ThemeMode.dark : ThemeMode.light,
-      
+
       theme: ThemeData(
         brightness: Brightness.light,
+        fontFamily: 'Arial',
         primarySwatch: Colors.blue,
         scaffoldBackgroundColor: const Color(0xFFF5F7FA),
       ),
-      
+
       darkTheme: ThemeData(
         brightness: Brightness.dark,
+        fontFamily: 'Arial',
         primarySwatch: Colors.blue,
         scaffoldBackgroundColor: const Color(0xFF0F1626),
       ),
-      
-      // Uygulama ilk açıldığında doğrudan Giriş Ekranı (LoginScreen) karşılayacak
-      home: const LoginScreen(),
+
+      home: const SessionGate(),
     );
   }
 }

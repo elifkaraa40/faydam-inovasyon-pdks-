@@ -13,495 +13,277 @@ class IzinScreen extends StatefulWidget {
 
 class _IzinScreenState extends State<IzinScreen> {
   final ApiService _apiService = ApiService();
-
-  List<dynamic> _leaveRequests = [];
+  List<Map<String, dynamic>> _requests = [];
   bool _isLoading = true;
+  String? _error;
 
   @override
   void initState() {
     super.initState();
-    _fetchLeaveRequests();
+    _load();
   }
-Future<void> _fetchLeaveRequests() async {
+
+  Future<void> _load() async {
     setState(() {
       _isLoading = true;
+      _error = null;
     });
-
     try {
-      // API'den gelen izin taleplerini list değişkenine alıyoruz
-      final list = await _apiService.getLeaveRequests();
-
+      final values = await _apiService.getLeaveRequests();
       if (!mounted) return;
-
       setState(() {
-        // Alınan listeyi ekrandaki değişkenimize atıyoruz
-        var _allLeaveRequests = list;
+        _requests = values
+            .whereType<Map>()
+            .map((value) => Map<String, dynamic>.from(value))
+            .toList();
       });
     } catch (error) {
       if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Hata: ${error.toString().replaceFirst('Exception: ', '')}'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      setState(() => _error = error.toString());
     } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  Future<void> _createNewLeaveRequest() async {
-    final selectedType = await showDialog<String>(
-      context: context,
-      builder: (dialogContext) {
-        return SimpleDialog(
-          title: const Text('İzin Tipi Seçin'),
-          children: [
-            SimpleDialogOption(
-              onPressed: () {
-                Navigator.pop(
-                  dialogContext,
-                  'Annual',
-                );
-              },
-              child: const Text(
-                'Yıllık İzin (Annual)',
-              ),
-            ),
-            SimpleDialogOption(
-              onPressed: () {
-                Navigator.pop(
-                  dialogContext,
-                  'Sick',
-                );
-              },
-              child: const Text(
-                'Sağlık İzni (Sick)',
-              ),
-            ),
-            SimpleDialogOption(
-              onPressed: () {
-                Navigator.pop(
-                  dialogContext,
-                  'Excuse',
-                );
-              },
-              child: const Text(
-                'Mazeret İzni (Excuse)',
-              ),
-            ),
-            SimpleDialogOption(
-              onPressed: () {
-                Navigator.pop(
-                  dialogContext,
-                  'Unpaid',
-                );
-              },
-              child: const Text(
-                'Ücretsiz İzin (Unpaid)',
-              ),
-            ),
-          ],
-        );
-      },
-    );
-
-    if (!mounted || selectedType == null) return;
-
-    final pickedRange = await showDateRangePicker(
-      context: context,
-      firstDate: DateTime.now(),
-      lastDate: DateTime.now().add(
-        const Duration(days: 365),
-      ),
-    );
-
-    if (!mounted || pickedRange == null) return;
-
-    final reasonController = TextEditingController();
-
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          title: const Text('Açıklama Girin'),
-          content: TextField(
-            controller: reasonController,
-            decoration: const InputDecoration(
-              hintText: 'İzin alma sebebi...',
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(
-                  dialogContext,
-                  false,
-                );
-              },
-              child: const Text('İptal'),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.pop(
-                  dialogContext,
-                  true,
-                );
-              },
-              child: const Text('Gönder'),
-            ),
-          ],
-        );
-      },
-    );
-
-    final reason = reasonController.text.trim();
-    reasonController.dispose();
-
-    if (!mounted || confirm != true || reason.isEmpty) {
-      return;
-    }
-
-    setState(() {
-      _isLoading = true;
-    });
-
-    try {
-      await _apiService.createLeaveRequest(
-        leaveType: selectedType,
-        startDate: _formatDate(
-          pickedRange.start,
-        ),
-        endDate: _formatDate(
-          pickedRange.end,
-        ),
-        reason: reason, dayPortion: '',
-      );
-
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'İzin talebiniz gönderildi.',
-          ),
-        ),
-      );
-
-      await _fetchLeaveRequests();
-    } catch (error) {
-      if (!mounted) return;
-
-      final message = error.toString().replaceFirst('Exception: ', '');
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Talep iletilemedi: $message',
-          ),
-        ),
-      );
-
-      setState(() {
-        _isLoading = false;
-      });
-    }
-  }
-
-  Future<void> _cancelLeaveRequest(
-    Object requestId,
-  ) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          title: const Text('Talebi İptal Et'),
-          content: const Text(
-            'Bu izin talebini iptal etmek '
-            'istediğinize emin misiniz?',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(
-                  dialogContext,
-                  false,
-                );
-              },
-              child: const Text('Vazgeç'),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.pop(
-                  dialogContext,
-                  true,
-                );
-              },
-              child: const Text(
-                'Evet, İptal Et',
-              ),
-            ),
-          ],
-        );
-      },
-    );
-
-    if (!mounted || confirm != true) return;
-
-    setState(() {
-      _isLoading = true;
-    });
-
-    try {
-      await _apiService.deleteLeaveRequest(
-        requestId,
-      );
-
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'İzin talebi iptal edildi.',
-          ),
-        ),
-      );
-
-      await _fetchLeaveRequests();
-    } catch (error) {
-      if (!mounted) return;
-
-      final message = error.toString().replaceFirst('Exception: ', '');
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'İptal işlemi başarısız: $message',
-          ),
-        ),
-      );
-
-      setState(() {
-        _isLoading = false;
-      });
-    }
-  }
-
-  String _formatDate(DateTime date) {
-    final year = date.year.toString().padLeft(4, '0');
-
-    final month = date.month.toString().padLeft(2, '0');
-
-    final day = date.day.toString().padLeft(2, '0');
-
-    return '$year-$month-$day';
-  }
-
-  String _leaveTypeText(Object? value) {
+  String _type(Object? value) {
     switch (value?.toString()) {
       case 'Annual':
       case '1':
-        return 'Yıllık';
-
+        return 'Yıllık İzin';
       case 'Sick':
       case '2':
-        return 'Sağlık';
-
+        return 'Sağlık İzni';
       case 'Excuse':
       case '3':
-        return 'Mazeret';
-
+        return 'Mazeret İzni';
       case 'Unpaid':
       case '4':
-        return 'Ücretsiz';
-
+        return 'Ücretsiz İzin';
       default:
         return value?.toString() ?? 'İzin';
     }
   }
 
-  String _statusText(Object? value) {
+  String _status(Object? value) {
     switch (value?.toString()) {
       case 'Pending':
       case '1':
         return 'Beklemede';
-
       case 'Approved':
       case '2':
         return 'Onaylandı';
-
       case 'Rejected':
       case '3':
         return 'Reddedildi';
-
       case 'Cancelled':
       case '4':
-        return 'İptal Edildi';
-
+        return 'İptal edildi';
       default:
-        return value?.toString() ?? 'Beklemede';
+        return value?.toString() ?? 'Bilinmiyor';
     }
   }
 
-  bool _isPending(Object? value) {
-    return value?.toString() == 'Pending' || value?.toString() == '1';
+  bool _pending(Object? value) =>
+      value?.toString() == 'Pending' || value?.toString() == '1';
+
+  Future<void> _cancel(Object id) async {
+    await _apiService.deleteLeaveRequest(id);
+    await _load();
   }
 
-  bool _isApproved(Object? value) {
-    return value?.toString() == 'Approved' || value?.toString() == '2';
+  Future<void> _showCreateForm() async {
+    String type = 'Annual';
+    DateTime start = DateTime.now();
+    DateTime end = DateTime.now();
+    final reason = TextEditingController();
+    String? reasonError;
+    final submitted = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Yeni İzin Talebi'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                DropdownButtonFormField<String>(
+                  initialValue: type,
+                  items: const [
+                    DropdownMenuItem(
+                        value: 'Annual', child: Text('Yıllık izin')),
+                    DropdownMenuItem(value: 'Sick', child: Text('Sağlık izni')),
+                    DropdownMenuItem(
+                        value: 'Excuse', child: Text('Mazeret izni')),
+                    DropdownMenuItem(
+                        value: 'Unpaid', child: Text('Ücretsiz izin')),
+                  ],
+                  onChanged: (value) => setDialogState(() => type = value!),
+                ),
+                ListTile(
+                  title: const Text('Başlangıç'),
+                  subtitle: Text(_date(start)),
+                  onTap: () async {
+                    final value = await showDatePicker(
+                      context: context,
+                      firstDate: DateTime.now(),
+                      lastDate: DateTime.now().add(const Duration(days: 365)),
+                      initialDate: start,
+                    );
+                    if (value != null) {
+                      setDialogState(() {
+                        start = value;
+                        if (end.isBefore(start)) end = start;
+                      });
+                    }
+                  },
+                ),
+                ListTile(
+                  title: const Text('Bitiş'),
+                  subtitle: Text(_date(end)),
+                  onTap: () async {
+                    final value = await showDatePicker(
+                      context: context,
+                      firstDate: start,
+                      lastDate: DateTime.now().add(const Duration(days: 365)),
+                      initialDate: end.isBefore(start) ? start : end,
+                    );
+                    if (value != null) setDialogState(() => end = value);
+                  },
+                ),
+                TextField(
+                  controller: reason,
+                  onChanged: (_) {
+                    if (reasonError != null) {
+                      setDialogState(() => reasonError = null);
+                    }
+                  },
+                  decoration: InputDecoration(
+                    labelText: 'Açıklama',
+                    errorText: reasonError,
+                  ),
+                  maxLines: 3,
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('İptal')),
+            FilledButton(
+                onPressed: () {
+                  if (reason.text.trim().isEmpty) {
+                    setDialogState(() =>
+                        reasonError = 'İzin talebi için açıklama zorunludur.');
+                    return;
+                  }
+                  if (end.isBefore(start)) {
+                    setDialogState(() => reasonError =
+                        'Bitiş tarihi başlangıç tarihinden önce olamaz.');
+                    return;
+                  }
+                  Navigator.pop(context, true);
+                },
+                child: const Text('Gönder')),
+          ],
+        ),
+      ),
+    );
+    if (submitted != true || !mounted) {
+      reason.dispose();
+      return;
+    }
+    try {
+      await _apiService.createLeaveRequest(
+        leaveType: type,
+        startDate: _date(start),
+        endDate: _date(end),
+        reason: reason.text.trim(),
+        dayPortion: 'FullDay',
+      );
+      await _load();
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text(error.toString()), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      reason.dispose();
+    }
   }
+
+  String _date(DateTime value) =>
+      '${value.year.toString().padLeft(4, '0')}-${value.month.toString().padLeft(2, '0')}-${value.day.toString().padLeft(2, '0')}';
 
   @override
   Widget build(BuildContext context) {
-    final settings = Provider.of<AppSettings>(context);
-
-    final textColor = settings.isDarkMode ? Colors.white : AppColors.darkNavy;
-
+    final settings = context.watch<AppSettings>();
+    final isDark = settings.isDarkMode;
+    final textColor = isDark ? Colors.white : AppColors.darkNavy;
+    final cardColor = isDark ? AppColors.cardNavy : Colors.white;
     return Scaffold(
-      backgroundColor:
-          settings.isDarkMode ? AppColors.darkNavy : AppColors.lightBackground,
+      backgroundColor: isDark ? AppColors.darkNavy : AppColors.lightBackground,
       appBar: AppBar(
-        title: Text(
-          'İzin Taleplerim',
-          style: TextStyle(
-            color: textColor,
-          ),
-        ),
+        title: Text('İzin Taleplerim', style: TextStyle(color: textColor)),
         backgroundColor: Colors.transparent,
         elevation: 0,
         actions: [
-          IconButton(
-            tooltip: 'Yenile',
-            icon: Icon(
-              Icons.refresh,
-              color: textColor,
-            ),
-            onPressed: _isLoading ? null : _fetchLeaveRequests,
-          ),
+          IconButton(onPressed: _load, icon: const Icon(Icons.refresh))
         ],
       ),
       body: _isLoading
-          ? const Center(
-              child: CircularProgressIndicator(
-                color: AppColors.neonTurquoise,
-              ),
-            )
-          : _leaveRequests.isEmpty
+          ? const Center(child: CircularProgressIndicator())
+          : _error != null
               ? Center(
-                  child: Text(
-                    'Henüz bir izin talebiniz '
-                    'bulunmuyor.',
-                    style: TextStyle(
-                      color: textColor,
-                    ),
-                  ),
-                )
+                  child: Text(_error!,
+                      style: const TextStyle(color: Colors.redAccent)))
               : RefreshIndicator(
-                  onRefresh: _fetchLeaveRequests,
-                  child: ListView.builder(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: _leaveRequests.length,
-                    itemBuilder: (
-                      context,
-                      index,
-                    ) {
-                      final rawItem = _leaveRequests[index];
-
-                      if (rawItem is! Map) {
-                        return const SizedBox.shrink();
-                      }
-
-                      final item = Map<String, dynamic>.from(
-                        rawItem,
-                      );
-
-                      final status = item['status'];
-
-                      return Card(
-                        color: settings.isDarkMode
-                            ? AppColors.cardNavy
-                            : Colors.white,
-                        margin: const EdgeInsets.only(
-                          bottom: 12,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(
-                            16,
-                          ),
-                        ),
-                        child: ListTile(
-                          title: Text(
-                            '${_leaveTypeText(item['leaveType'])} İzni',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: textColor,
-                            ),
-                          ),
-                          subtitle: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                "Tarih: ${item['startDate']} - ${item['endDate']}",
-                                style: TextStyle(
-                                  color: textColor.withValues(
-                                    alpha: 0.7,
-                                  ),
+                  onRefresh: _load,
+                  child: _requests.isEmpty
+                      ? ListView(children: const [
+                          SizedBox(height: 180),
+                          Center(
+                              child: Text('Kayıtlı izin talebi bulunmuyor.')),
+                        ])
+                      : ListView.builder(
+                          padding: const EdgeInsets.all(16),
+                          itemCount: _requests.length,
+                          itemBuilder: (context, index) {
+                            final item = _requests[index];
+                            final status = item['status'];
+                            return Card(
+                              color: cardColor,
+                              child: ListTile(
+                                title: Text(_type(item['leaveType']),
+                                    style: TextStyle(
+                                        color: textColor,
+                                        fontWeight: FontWeight.bold)),
+                                subtitle: Text(
+                                  '${item['startDate'] ?? ''} - ${item['endDate'] ?? ''}\n${item['reason'] ?? ''}\nDurum: ${_status(status)}',
+                                  style: TextStyle(
+                                      color: textColor.withValues(alpha: .7)),
                                 ),
+                                isThreeLine: true,
+                                trailing: _pending(status) && item['id'] != null
+                                    ? IconButton(
+                                        onPressed: () => _cancel(item['id']),
+                                        icon: const Icon(Icons.cancel,
+                                            color: Colors.redAccent),
+                                      )
+                                    : null,
                               ),
-                              Text(
-                                "Açıklama: ${item['reason'] ?? ''}",
-                                style: TextStyle(
-                                  color: textColor.withValues(
-                                    alpha: 0.7,
-                                  ),
-                                ),
-                              ),
-                              Text(
-                                'Durum: ${_statusText(status)}',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: _isApproved(status)
-                                      ? Colors.green
-                                      : Colors.orange,
-                                ),
-                              ),
-                            ],
-                          ),
-                          trailing: _isPending(status)
-                              ? IconButton(
-                                  tooltip: 'Talebi iptal et',
-                                  icon: const Icon(
-                                    Icons.cancel,
-                                    color: Colors.red,
-                                  ),
-                                  onPressed: () {
-                                    final id = item['id'];
-
-                                    if (id != null) {
-                                      _cancelLeaveRequest(
-                                        id,
-                                      );
-                                    }
-                                  },
-                                )
-                              : null,
+                            );
+                          },
                         ),
-                      );
-                    },
-                  ),
                 ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _isLoading ? null : _createNewLeaveRequest,
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _showCreateForm,
         backgroundColor: AppColors.neonTurquoise,
-        child: const Icon(
-          Icons.add,
-          color: AppColors.darkNavy,
-        ),
+        icon: const Icon(Icons.add, color: AppColors.darkNavy),
+        label: const Text('Yeni Talep',
+            style: TextStyle(color: AppColors.darkNavy)),
       ),
     );
   }

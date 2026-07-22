@@ -1,8 +1,12 @@
 import 'dart:async';
-import 'package:flutter/material.dart';
+
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
 import 'app_provider.dart';
+import 'models/break_models.dart';
+import 'services/api_service.dart';
 
 class MolaScreen extends StatefulWidget {
   const MolaScreen({super.key});
@@ -12,178 +16,387 @@ class MolaScreen extends StatefulWidget {
 }
 
 class _MolaScreenState extends State<MolaScreen> {
-  bool _isMolaActive = false;
-  Timer? _molaTimer;
+  final ApiService _apiService = ApiService();
+  CurrentBreak _current = const CurrentBreak(isOnBreak: false);
+  List<BreakHistoryItem> _history = [];
+  List<ActiveColleagueBreak> _colleagues = [];
+  Timer? _timer;
+  bool _isLoading = true;
+  bool _isChanging = false;
+  String? _error;
 
-  int _secondsPassed = 0;
-  int _remainingSeconds = 3600;
-  void _toggleMola() {
-    setState(() {
-      _isMolaActive = !_isMolaActive;
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted && _current.isOnBreak) setState(() {});
     });
+    _load();
+  }
 
-    if (_isMolaActive) {
-      _molaTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-        setState(() {
-          _secondsPassed++;
-          if (_remainingSeconds > 0) {
-            _remainingSeconds--;
-          }
-        });
+  Future<void> _load() async {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+    try {
+      final now = DateTime.now();
+      final values = await Future.wait<Object>([
+        _apiService.getCurrentBreak(),
+        _apiService.getBreakHistory(
+          from: DateTime(now.year, now.month),
+          to: now,
+        ),
+        _apiService.getActiveColleagueBreaks(),
+      ]);
+      if (!mounted) return;
+      setState(() {
+        _current = values[0] as CurrentBreak;
+        _history = values[1] as List<BreakHistoryItem>;
+        _colleagues = values[2] as List<ActiveColleagueBreak>;
       });
-    } else {
-      _molaTimer?.cancel();
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _error = error.toString());
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  String _formatTime(int totalSeconds) {
-    int minutes = totalSeconds ~/ 60;
-    int seconds = totalSeconds % 60;
-    return "${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}";
+  Future<void> _toggleBreak() async {
+    if (_isChanging) return;
+    setState(() {
+      _isChanging = true;
+      _error = null;
+    });
+    try {
+      if (_current.isOnBreak) {
+        final id = _current.breakId;
+        if (id == null || id.isEmpty) {
+          throw const ApiException('Aktif mola kimliği bulunamadı.');
+        }
+        await _apiService.endBreak(id);
+      } else {
+        await _apiService.startBreak();
+      }
+      await _load();
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _error = error.toString());
+    } finally {
+      if (mounted) setState(() => _isChanging = false);
+    }
+  }
+
+  Duration get _currentDuration {
+    final startedAt = _current.startedAt;
+    if (!_current.isOnBreak || startedAt == null) return Duration.zero;
+    final value = DateTime.now().difference(startedAt.toLocal());
+    return value.isNegative ? Duration.zero : value;
+  }
+
+  int get _monthlyMinutes => _history.fold<int>(
+        0,
+        (total, item) => total + (item.durationMinutes ?? 0),
+      );
+
+  String _duration(Duration value) {
+    final hours = value.inHours.toString().padLeft(2, '0');
+    final minutes = value.inMinutes.remainder(60).toString().padLeft(2, '0');
+    final seconds = value.inSeconds.remainder(60).toString().padLeft(2, '0');
+    return '$hours:$minutes:$seconds';
+  }
+
+  String _time(DateTime value) {
+    final local = value.toLocal();
+    return '${local.hour.toString().padLeft(2, '0')}:${local.minute.toString().padLeft(2, '0')}';
+  }
+
+  String _dateTime(DateTime value) {
+    final local = value.toLocal();
+    return '${local.day.toString().padLeft(2, '0')}.${local.month.toString().padLeft(2, '0')}.${local.year} ${_time(local)}';
   }
 
   @override
   void dispose() {
-    _molaTimer?.cancel();
+    _timer?.cancel();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final settings = Provider.of<AppSettings>(context);
-    final cardBg =
-        settings.isDarkMode ? AppColors.cardNavy : AppColors.lightCard;
-    final textColor = settings.isDarkMode ? Colors.white : AppColors.darkNavy;
+    final settings = context.watch<AppSettings>();
+    final isDark = settings.isDarkMode;
+    final cardBg = isDark ? AppColors.cardNavy : Colors.white;
+    final textColor = isDark ? Colors.white : AppColors.darkNavy;
+    final subTextColor = isDark ? Colors.grey[400]! : Colors.grey[600]!;
+    final borderColor = isDark
+        ? Colors.white.withValues(alpha: .05)
+        : Colors.black.withValues(alpha: .05);
 
     return Scaffold(
-      backgroundColor:
-          settings.isDarkMode ? AppColors.darkNavy : AppColors.lightBackground,
+      backgroundColor: isDark ? AppColors.darkNavy : AppColors.lightBackground,
       appBar: AppBar(
-        title: const Text("Mola İşlemleri",
-            style: TextStyle(fontWeight: FontWeight.bold)),
+        title: Text('Mola Yönetimi',
+            style: TextStyle(
+                color: textColor, fontSize: 18, fontWeight: FontWeight.bold)),
         centerTitle: true,
-        backgroundColor: settings.isDarkMode
-            ? AppColors.darkNavy
-            : AppColors.lightBackground,
+        backgroundColor: Colors.transparent,
         elevation: 0,
-        automaticallyImplyLeading: false,
+        actions: [
+          IconButton(
+              onPressed: _isLoading ? null : _load,
+              icon: const Icon(Icons.refresh)),
+        ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 20),
-                    decoration: BoxDecoration(
-                        color: cardBg, borderRadius: BorderRadius.circular(12)),
-                    child: Column(
-                      children: [
-                        const Text("Mola Geçen",
-                            style: TextStyle(color: Colors.grey, fontSize: 13)),
-                        const SizedBox(height: 8),
-                        Text(
-                          _formatTime(_secondsPassed),
-                          style: const TextStyle(
-                              color: AppColors.neonTurquoise,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 24),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 20),
-                    decoration: BoxDecoration(
-                        color: cardBg, borderRadius: BorderRadius.circular(12)),
-                    child: Column(
-                      children: [
-                        const Text("Kalan Hak",
-                            style: TextStyle(color: Colors.grey, fontSize: 13)),
-                        const SizedBox(height: 8),
-                        Text(
-                          _formatTime(_remainingSeconds),
-                          style: const TextStyle(
-                              color: AppColors.accentOrange,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 24),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-            const Text("Moladaki Çalışma Arkadaşlarım",
-                style: TextStyle(
-                    color: Colors.grey,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16)),
-            const SizedBox(height: 12),
-            Expanded(
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : RefreshIndicator(
+              onRefresh: _load,
               child: ListView(
+                padding: const EdgeInsets.all(16),
                 children: [
-                  _buildFriendCard(
-                      "Ahmet Yılmaz", "10 dakikadır molada", cardBg, textColor),
-                  _buildFriendCard(
-                      "Ayşe Demir", "5 dakikadır molada", cardBg, textColor),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _statCard(
+                          'Geçen Mola',
+                          _duration(_currentDuration),
+                          AppColors.neonTurquoise,
+                          cardBg,
+                          subTextColor,
+                          borderColor,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: _statCard(
+                          'Bu Ay Toplam',
+                          '$_monthlyMinutes dk',
+                          AppColors.accentOrange,
+                          cardBg,
+                          subTextColor,
+                          borderColor,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 30),
+                  Center(
+                    child: Container(
+                      width: 220,
+                      height: 220,
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: cardBg,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: borderColor),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black
+                                .withValues(alpha: isDark ? .2 : .05),
+                            blurRadius: 20,
+                          ),
+                        ],
+                      ),
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          SizedBox(
+                            width: 180,
+                            height: 180,
+                            child: CircularProgressIndicator(
+                              value: _current.isOnBreak ? null : 0,
+                              strokeWidth: 10,
+                              backgroundColor:
+                                  isDark ? Colors.white10 : Colors.black12,
+                              color: AppColors.neonTurquoise,
+                            ),
+                          ),
+                          Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                _current.isOnBreak
+                                    ? CupertinoIcons.timer_fill
+                                    : CupertinoIcons.timer,
+                                size: 36,
+                                color: _current.isOnBreak
+                                    ? AppColors.neonTurquoise
+                                    : subTextColor,
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                _current.isOnBreak
+                                    ? 'Moladasınız'
+                                    : 'Çalışıyorsunuz',
+                                style: TextStyle(
+                                    color: textColor,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16),
+                              ),
+                              if (_current.isOnBreak)
+                                Text(_duration(_currentDuration),
+                                    style: TextStyle(
+                                        color: subTextColor, fontSize: 12)),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 30),
+                  SizedBox(
+                    height: 56,
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _current.isOnBreak
+                            ? Colors.redAccent
+                            : AppColors.neonTurquoise,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16)),
+                      ),
+                      onPressed: _isChanging ? null : _toggleBreak,
+                      icon: _isChanging
+                          ? const SizedBox.square(
+                              dimension: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : Icon(
+                              _current.isOnBreak
+                                  ? CupertinoIcons.stop_fill
+                                  : CupertinoIcons.play_fill,
+                              color: _current.isOnBreak
+                                  ? Colors.white
+                                  : AppColors.darkNavy,
+                            ),
+                      label: Text(
+                        _current.isOnBreak ? 'Molayı Bitir' : 'Molayı Başlat',
+                        style: TextStyle(
+                            color: _current.isOnBreak
+                                ? Colors.white
+                                : AppColors.darkNavy,
+                            fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ),
+                  if (_error != null) ...[
+                    const SizedBox(height: 12),
+                    Text(_error!,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(color: Colors.redAccent)),
+                  ],
+                  const SizedBox(height: 30),
+                  Text('Moladaki Arkadaşlarım',
+                      style: TextStyle(
+                          color: textColor,
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 12),
+                  if (_colleagues.isEmpty)
+                    _emptyCard('Şu anda molada olan çalışma arkadaşınız yok.',
+                        cardBg, subTextColor, borderColor)
+                  else
+                    ..._colleagues.map((item) => _colleagueCard(
+                        item, cardBg, textColor, subTextColor, borderColor)),
+                  const SizedBox(height: 26),
+                  Text('Mola Geçmişim',
+                      style: TextStyle(
+                          color: textColor,
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 12),
+                  if (_history.isEmpty)
+                    _emptyCard('Bu ay için mola kaydınız bulunmuyor.', cardBg,
+                        subTextColor, borderColor)
+                  else
+                    ..._history.map((item) => _historyCard(
+                        item, cardBg, textColor, subTextColor, borderColor)),
                 ],
               ),
             ),
-            SizedBox(
-              width: double.infinity,
-              height: 56,
-              child: OutlinedButton(
-                onPressed: _toggleMola,
-                style: OutlinedButton.styleFrom(
-                  side: BorderSide(
-                      color:
-                          _isMolaActive ? Colors.red : AppColors.neonTurquoise,
-                      width: 2),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
-                  backgroundColor:
-                      settings.isDarkMode ? AppColors.darkNavy : Colors.white,
-                ),
-                child: Text(
-                  _isMolaActive ? "Molayı Bitir" : "Molaya Başla",
-                  style: TextStyle(
-                      color:
-                          _isMolaActive ? Colors.red : AppColors.neonTurquoise,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-          ],
-        ),
-      ),
     );
   }
 
-  Widget _buildFriendCard(String name, String time, Color bg, Color textClr) {
-    return Card(
-      color: bg,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: ListTile(
-        leading: const CircleAvatar(
-          backgroundColor: AppColors.darkNavy,
-          child:
-              Icon(CupertinoIcons.person_fill, color: AppColors.neonTurquoise),
+  Widget _statCard(String title, String value, Color valueColor,
+          Color background, Color subText, Color border) =>
+      Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: background,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: border),
         ),
-        title: Text(name,
-            style: TextStyle(color: textClr, fontWeight: FontWeight.bold)),
-        subtitle: Text(time,
-            style: const TextStyle(color: Colors.grey, fontSize: 12)),
-      ),
-    );
-  }
+        child: Column(
+          children: [
+            Text(title, style: TextStyle(color: subText, fontSize: 12)),
+            const SizedBox(height: 6),
+            Text(value,
+                style: TextStyle(
+                    color: valueColor,
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold)),
+          ],
+        ),
+      );
+
+  Widget _emptyCard(
+          String message, Color background, Color subText, Color border) =>
+      Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: background,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: border),
+        ),
+        child: Text(message,
+            textAlign: TextAlign.center, style: TextStyle(color: subText)),
+      );
+
+  Widget _colleagueCard(ActiveColleagueBreak item, Color background, Color text,
+          Color subText, Color border) =>
+      Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        decoration: BoxDecoration(
+          color: background,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: border),
+        ),
+        child: ListTile(
+          leading: const CircleAvatar(
+            backgroundColor: AppColors.darkNavy,
+            child: Icon(CupertinoIcons.person, color: AppColors.neonTurquoise),
+          ),
+          title: Text(item.fullName,
+              style: TextStyle(color: text, fontWeight: FontWeight.bold)),
+          subtitle: Text(
+            [
+              if (item.department?.trim().isNotEmpty == true) item.department!,
+              '${_time(item.startedAt)} itibarıyla molada',
+            ].join(' • '),
+            style: TextStyle(color: subText, fontSize: 11),
+          ),
+        ),
+      );
+
+  Widget _historyCard(BreakHistoryItem item, Color background, Color text,
+          Color subText, Color border) =>
+      Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        decoration: BoxDecoration(
+          color: background,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: border),
+        ),
+        child: ListTile(
+          leading: const Icon(Icons.history, color: AppColors.neonTurquoise),
+          title: Text('${item.durationMinutes ?? 0} dakika',
+              style: TextStyle(color: text, fontWeight: FontWeight.bold)),
+          subtitle: Text(
+            '${_dateTime(item.startedAt)}${item.endedAt == null ? '' : ' - ${_time(item.endedAt!)}'}${item.autoClosed ? '\nÇıkışta otomatik kapatıldı' : ''}',
+            style: TextStyle(color: subText, fontSize: 11),
+          ),
+        ),
+      );
 }

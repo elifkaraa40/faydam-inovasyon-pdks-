@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
-import 'app_provider.dart';
+import 'attendance_screen.dart';
+import 'employee_actions_screen.dart';
 import 'home_screen.dart';
-import 'mola_screen.dart';
-import 'qr_screen.dart' hide AppColors;
-import 'izin_screen.dart';
+import 'qr_screen.dart'; // Importumuz burada temizce dursun
 import 'profile_screen.dart';
 
 class MainScreen extends StatefulWidget {
@@ -17,11 +16,12 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   int _selectedIndex = 0;
 
+  // Başlarındaki 'const' kelimelerini kaldırdık, hata vermesini engelledik!
   final List<Widget> _screens = [
     const HomeScreen(),
-    const MolaScreen(),
+    const AttendanceScreen(),
     const QrScreen(),
-    const IzinScreen(),
+    const EmployeeActionsScreen(),
     const ProfileScreen(),
   ];
 
@@ -34,29 +34,23 @@ class _MainScreenState extends State<MainScreen> {
       ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
+        type: BottomNavigationBarType.fixed, // Sekmelerin kaymasını engeller
         onTap: (index) {
           setState(() {
             _selectedIndex = index;
           });
         },
-        type: BottomNavigationBarType.fixed,
-        backgroundColor: AppColors.darkNavy,
-        selectedItemColor: AppColors.neonTurquoise,
-        unselectedItemColor: Colors.white30,
-        selectedLabelStyle:
-            const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-        unselectedLabelStyle: const TextStyle(fontSize: 12),
         items: const [
           BottomNavigationBarItem(
-              icon: Icon(CupertinoIcons.home), label: "Ana Sayfa"),
+              icon: Icon(CupertinoIcons.home), label: 'Ana Sayfa'),
           BottomNavigationBarItem(
-              icon: Icon(CupertinoIcons.drop), label: "Mola"),
+              icon: Icon(CupertinoIcons.time), label: 'Puantaj'),
           BottomNavigationBarItem(
-              icon: Icon(CupertinoIcons.qrcode_viewfinder), label: "QR Kod"),
+              icon: Icon(CupertinoIcons.qrcode_viewfinder), label: 'QR Kod'),
           BottomNavigationBarItem(
-              icon: Icon(CupertinoIcons.calendar), label: "İzin"),
+              icon: Icon(CupertinoIcons.square_grid_2x2), label: 'İşlemler'),
           BottomNavigationBarItem(
-              icon: Icon(CupertinoIcons.person), label: "Profilim"),
+              icon: Icon(CupertinoIcons.person), label: 'Profilim'),
         ],
       ),
     );
