@@ -95,10 +95,49 @@ class _MolaScreenState extends State<MolaScreen> {
     return value.isNegative ? Duration.zero : value;
   }
 
-  int get _monthlyMinutes => _history.fold<int>(
-        0,
-        (total, item) => total + (item.durationMinutes ?? 0),
-      );
+  // Vardiya ayarlarında tanımlı standart aylık mola hakkı.
+  // API ileride kullanıcı/shift bazlı hakkı döndürdüğünde bu değer oradan alınacak.
+  static const int _monthlyBreakLimitMinutes = 60;
+  int get _usedBreakSeconds {
+    var total = 0;
+    for (final item in _history) {
+      if (item.endedAt != null) total += _effectiveSeconds(item.startedAt, item.endedAt!);
+    }
+    if (_current.isOnBreak && _current.startedAt != null) {
+      total += _effectiveSeconds(_current.startedAt!, DateTime.now());
+    }
+    return total;
+  }
+
+  int get _remainingBreakSeconds =>
+      _monthlyBreakLimitMinutes * 60 - _usedBreakSeconds;
+
+  String get _remainingLabel {
+    final seconds = _remainingBreakSeconds;
+    final sign = seconds < 0 ? '-' : '';
+    final absolute = seconds.abs();
+    final hours = (absolute ~/ 3600).toString().padLeft(2, '0');
+    final minutes = ((absolute % 3600) ~/ 60).toString().padLeft(2, '0');
+    final remainder = (absolute % 60).toString().padLeft(2, '0');
+    return '$sign$hours:$minutes:$remainder';
+  }
+
+  int _effectiveSeconds(DateTime start, DateTime end) {
+    if (!end.isAfter(start)) return 0;
+    var effectiveSeconds = end.difference(start).inSeconds;
+    for (var day = DateTime(start.year, start.month, start.day);
+        !day.isAfter(DateTime(end.year, end.month, end.day));
+        day = day.add(const Duration(days: 1))) {
+      final lunchStart = DateTime(day.year, day.month, day.day, 12, 30);
+      final lunchEnd = DateTime(day.year, day.month, day.day, 13, 30);
+      final overlapStart = start.isAfter(lunchStart) ? start : lunchStart;
+      final overlapEnd = end.isBefore(lunchEnd) ? end : lunchEnd;
+      if (overlapEnd.isAfter(overlapStart)) {
+        effectiveSeconds -= overlapEnd.difference(overlapStart).inSeconds;
+      }
+    }
+    return effectiveSeconds;
+  }
 
   String _duration(Duration value) {
     final hours = value.inHours.toString().padLeft(2, '0');
@@ -126,6 +165,7 @@ class _MolaScreenState extends State<MolaScreen> {
   @override
   Widget build(BuildContext context) {
     final settings = context.watch<AppSettings>();
+    final en = settings.isEnglish;
     final isDark = settings.isDarkMode;
     final cardBg = isDark ? AppColors.cardNavy : Colors.white;
     final textColor = isDark ? Colors.white : AppColors.darkNavy;
@@ -137,7 +177,7 @@ class _MolaScreenState extends State<MolaScreen> {
     return Scaffold(
       backgroundColor: isDark ? AppColors.darkNavy : AppColors.lightBackground,
       appBar: AppBar(
-        title: Text('Mola Yönetimi',
+        title: Text(en ? 'Break Management' : 'Mola Yönetimi',
             style: TextStyle(
                 color: textColor, fontSize: 18, fontWeight: FontWeight.bold)),
         centerTitle: true,
@@ -160,7 +200,7 @@ class _MolaScreenState extends State<MolaScreen> {
                     children: [
                       Expanded(
                         child: _statCard(
-                          'Geçen Mola',
+                          en ? 'Elapsed Break' : 'Geçen Mola',
                           _duration(_currentDuration),
                           AppColors.neonTurquoise,
                           cardBg,
@@ -171,8 +211,8 @@ class _MolaScreenState extends State<MolaScreen> {
                       const SizedBox(width: 16),
                       Expanded(
                         child: _statCard(
-                          'Bu Ay Toplam',
-                          '$_monthlyMinutes dk',
+                          en ? 'Remaining Break' : 'Kalan Mola',
+                          _remainingLabel,
                           AppColors.accentOrange,
                           cardBg,
                           subTextColor,
@@ -228,8 +268,8 @@ class _MolaScreenState extends State<MolaScreen> {
                               const SizedBox(height: 8),
                               Text(
                                 _current.isOnBreak
-                                    ? 'Moladasınız'
-                                    : 'Çalışıyorsunuz',
+                                    ? (en ? 'On Break' : 'Moladasınız')
+                                    : (en ? 'Working' : 'Çalışıyorsunuz'),
                                 style: TextStyle(
                                     color: textColor,
                                     fontWeight: FontWeight.bold,
@@ -271,7 +311,7 @@ class _MolaScreenState extends State<MolaScreen> {
                                   : AppColors.darkNavy,
                             ),
                       label: Text(
-                        _current.isOnBreak ? 'Molayı Bitir' : 'Molayı Başlat',
+                        _current.isOnBreak ? (en ? 'End Break' : 'Molayı Bitir') : (en ? 'Start Break' : 'Molayı Başlat'),
                         style: TextStyle(
                             color: _current.isOnBreak
                                 ? Colors.white
@@ -287,7 +327,7 @@ class _MolaScreenState extends State<MolaScreen> {
                         style: const TextStyle(color: Colors.redAccent)),
                   ],
                   const SizedBox(height: 30),
-                  Text('Moladaki Arkadaşlarım',
+                  Text(en ? 'Colleagues on Break' : 'Moladaki Arkadaşlarım',
                       style: TextStyle(
                           color: textColor,
                           fontSize: 15,
@@ -300,7 +340,7 @@ class _MolaScreenState extends State<MolaScreen> {
                     ..._colleagues.map((item) => _colleagueCard(
                         item, cardBg, textColor, subTextColor, borderColor)),
                   const SizedBox(height: 26),
-                  Text('Mola Geçmişim',
+                  Text(en ? 'My Break History' : 'Mola Geçmişim',
                       style: TextStyle(
                           color: textColor,
                           fontSize: 15,

@@ -13,6 +13,7 @@ class EmployeeActionsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dark = context.watch<AppSettings>().isDarkMode;
+    final en = context.watch<AppSettings>().isEnglish;
     final text = dark ? Colors.white : AppColors.darkNavy;
     return Scaffold(
       backgroundColor: dark ? AppColors.darkNavy : AppColors.lightBackground,
@@ -25,7 +26,7 @@ class EmployeeActionsScreen extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         children: [
           _ActionCard(
-            title: 'Mola',
+            title: en ? 'Breaks' : 'Mola',
             description:
                 'Molanızı başlatın, bitirin ve geçmişinizi görüntüleyin.',
             icon: Icons.free_breakfast_outlined,
@@ -34,7 +35,7 @@ class EmployeeActionsScreen extends StatelessWidget {
             onTap: () => _open(context, const MolaScreen()),
           ),
           _ActionCard(
-            title: 'İzin Talepleri',
+            title: en ? 'Leave Requests' : 'İzin Talepleri',
             description: 'İzin talebi oluşturun ve durumunu takip edin.',
             icon: Icons.event_available_outlined,
             textColor: text,
@@ -42,7 +43,7 @@ class EmployeeActionsScreen extends StatelessWidget {
             onTap: () => _open(context, const IzinScreen()),
           ),
           _ActionCard(
-            title: 'Çalışma Konumu',
+            title: en ? 'Work Location' : 'Çalışma Konumu',
             description: 'Saha görevi veya uzaktan çalışma talebi oluşturun.',
             icon: Icons.location_on_outlined,
             textColor: text,
@@ -50,7 +51,7 @@ class EmployeeActionsScreen extends StatelessWidget {
             onTap: () => _open(context, const WorkLocationScreen()),
           ),
           _ActionCard(
-            title: 'Puantaj Düzeltme Talebi',
+            title: en ? 'Attendance Correction' : 'Puantaj Düzeltme Talebi',
             description: 'Eksik veya hatalı giriş-çıkış kaydı için talep oluşturun.',
             icon: Icons.edit_calendar_outlined,
             textColor: text,

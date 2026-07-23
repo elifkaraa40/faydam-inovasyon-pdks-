@@ -30,6 +30,7 @@ class AppSettings extends ChangeNotifier {
   bool get isDarkMode => _isDarkMode;
 
   String get language => _language;
+  bool get isEnglish => _language == 'English (EN)';
 
   /// Yeni kodlarda kullanılacak token getter'ı.
   String? get accessToken => _accessToken;

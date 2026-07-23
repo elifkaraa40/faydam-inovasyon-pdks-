@@ -123,6 +123,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   @override
   Widget build(BuildContext context) {
     final dark = context.watch<AppSettings>().isDarkMode;
+    final en = context.watch<AppSettings>().isEnglish;
     final background = dark ? AppColors.darkNavy : AppColors.lightBackground;
     final card = dark ? AppColors.cardNavy : Colors.white;
     final text = dark ? Colors.white : AppColors.darkNavy;
@@ -174,7 +175,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                       minimumSize: const Size.fromHeight(44),
                       padding: const EdgeInsets.symmetric(horizontal: 4),
                     ),
-                    child: const Text('CSV indir'),
+                    child: Text(en ? 'Download CSV' : 'CSV indir'),
                   ),
                 ),
                 const SizedBox(width: 6),
@@ -188,7 +189,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                       minimumSize: const Size.fromHeight(44),
                       padding: const EdgeInsets.symmetric(horizontal: 4),
                     ),
-                    child: const Text('Excel indir'),
+                    child: Text(en ? 'Download Excel' : 'Excel indir'),
                   ),
                 ),
                 const SizedBox(width: 6),
@@ -202,7 +203,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                       minimumSize: const Size.fromHeight(44),
                       padding: const EdgeInsets.symmetric(horizontal: 4),
                     ),
-                    child: const Text('PDF indir'),
+                    child: Text(en ? 'Download PDF' : 'PDF indir'),
                   ),
                 ),
               ],

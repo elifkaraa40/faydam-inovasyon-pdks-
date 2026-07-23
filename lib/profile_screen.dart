@@ -196,6 +196,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final settings = context.watch<AppSettings>();
+    final en = settings.isEnglish;
     final isDark = settings.isDarkMode;
     final cardBg = isDark ? AppColors.cardNavy : Colors.white;
     final textColor = isDark ? Colors.white : AppColors.darkNavy;
@@ -214,7 +215,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Scaffold(
       backgroundColor: isDark ? AppColors.darkNavy : AppColors.lightBackground,
       appBar: AppBar(
-        title: Text('Profilim', style: TextStyle(color: textColor)),
+        title: Text(en ? 'My Profile' : 'Profilim', style: TextStyle(color: textColor)),
         centerTitle: true,
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -321,7 +322,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     tileColor: cardBg,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                     leading: const Icon(Icons.language, color: AppColors.neonTurquoise),
-                    title: Text('Dil ayarı', style: TextStyle(color: textColor)),
+                    title: Text(en ? 'Language' : 'Dil ayarı', style: TextStyle(color: textColor)),
                     subtitle: Text(settings.language, style: TextStyle(color: subTextColor)),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: _chooseLanguage,
@@ -331,7 +332,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     tileColor: cardBg,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                     leading: const Icon(Icons.help_outline, color: AppColors.neonTurquoise),
-                    title: Text('Yardım ve destek', style: TextStyle(color: textColor)),
+                    title: Text(en ? 'Help & Support' : 'Yardım ve destek', style: TextStyle(color: textColor)),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: _showSupport,
                   ),
@@ -339,8 +340,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   OutlinedButton.icon(
                     onPressed: _isSaving ? null : _editAccount,
                     icon: const Icon(Icons.manage_accounts),
-                    label:
-                        Text(_isSaving ? 'Kaydediliyor...' : 'Hesap ayarları'),
+                    label: Text(_isSaving ? (en ? 'Saving...' : 'Kaydediliyor...') : (en ? 'Account settings' : 'Hesap ayarları')),
                   ),
                   const SizedBox(height: 10),
                   OutlinedButton.icon(
@@ -351,7 +351,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
                         : const Icon(Icons.download_outlined),
-                    label: const Text('Kişisel verilerimi indir'),
+                    label: Text(en ? 'Download my data' : 'Kişisel verilerimi indir'),
                   ),
                   const SizedBox(height: 24),
                   SizedBox(
@@ -365,7 +365,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                       child: _isLoggingOut
                           ? const CircularProgressIndicator()
-                          : const Text('Çıkış Yap',
+                          : Text(en ? 'Log out' : 'Çıkış Yap',
                               style: TextStyle(color: Colors.redAccent)),
                     ),
                   ),

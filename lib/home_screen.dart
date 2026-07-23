@@ -117,6 +117,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final settings = context.watch<AppSettings>();
+    final en = settings.isEnglish;
     final isDark = settings.isDarkMode;
     final cardBg = isDark ? AppColors.cardNavy : Colors.white;
     final textColor = isDark ? Colors.white : AppColors.darkNavy;
@@ -156,7 +157,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Hoş Geldin,',
+                      Text(en ? 'Welcome,' : 'Hoş Geldin,',
                           style: TextStyle(color: subTextColor)),
                       Text(userName,
                           style: TextStyle(
@@ -196,7 +197,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
               const SizedBox(height: 24),
-              Text('Bugünkü Devam Bilgisi',
+              Text(en ? 'Today\'s Attendance' : 'Bugünkü Devam Bilgisi',
                   style: TextStyle(
                       color: textColor,
                       fontSize: 16,
@@ -240,11 +241,11 @@ class _HomeScreenState extends State<HomeScreen> {
                   Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                     Text('Güncel Durum', style: TextStyle(color: textColor, fontWeight: FontWeight.bold)),
                     const SizedBox(height: 12),
-                    _statusLine('Son QR girişi', checkIn, Icons.login, textColor, subTextColor),
+                    _statusLine(en ? 'Last QR entry' : 'Son QR girişi', checkIn, Icons.login, textColor, subTextColor),
                     const SizedBox(height: 8),
-                    _statusLine('Son QR çıkışı', checkOut, Icons.logout, textColor, subTextColor),
+                    _statusLine(en ? 'Last QR exit' : 'Son QR çıkışı', checkOut, Icons.logout, textColor, subTextColor),
                     const SizedBox(height: 8),
-                    _statusLine('Durum', status, Icons.info_outline, textColor, subTextColor),
+                    _statusLine(en ? 'Status' : 'Durum', status, Icons.info_outline, textColor, subTextColor),
                   ]),
                 ),
               const SizedBox(height: 12),
@@ -256,13 +257,13 @@ class _HomeScreenState extends State<HomeScreen> {
                     runSpacing: 16,
                     alignment: WrapAlignment.spaceAround,
                     children: [
-                      _summaryValue('Çalışılan', _minutes('workedMinutes'),
+                      _summaryValue(en ? 'Worked' : 'Çalışılan', _minutes('workedMinutes'),
                           textColor, subTextColor),
-                      _summaryValue('Beklenen', _minutes('expectedMinutes'),
+                      _summaryValue(en ? 'Expected' : 'Beklenen', _minutes('expectedMinutes'),
                           textColor, subTextColor),
-                      _summaryValue('Geç Kalma', _minutes('lateMinutes'),
+                      _summaryValue(en ? 'Late' : 'Geç Kalma', _minutes('lateMinutes'),
                           textColor, subTextColor),
-                      _summaryValue('Fazla Mesai', _minutes('overtimeMinutes'),
+                      _summaryValue(en ? 'Overtime' : 'Fazla Mesai', _minutes('overtimeMinutes'),
                           textColor, subTextColor),
                     ],
                   ),
