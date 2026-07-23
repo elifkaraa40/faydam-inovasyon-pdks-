@@ -381,108 +381,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                   ),
                   const SizedBox(height: 20),
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: cardBg,
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            const Icon(
-                              Icons.devices,
-                              color: AppColors.neonTurquoise,
-                            ),
-                            const SizedBox(width: 10),
-                            Text(
-                              en ? 'Active devices' : 'Aktif cihazlar',
-                              style: TextStyle(
-                                color: textColor,
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        if (_deviceSessions.isEmpty)
-                          Text(
-                            en
-                                ? 'No active device session was found.'
-                                : 'Aktif cihaz oturumu bulunamadı.',
-                            style: TextStyle(color: subTextColor),
-                          )
-                        else
-                          ..._deviceSessions.map(
-                            (device) => Padding(
-                              padding: const EdgeInsets.only(bottom: 10),
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Icon(
-                                    device['isCurrentDevice'] == true
-                                        ? Icons.smartphone
-                                        : Icons.devices_other,
-                                    color: AppColors.neonTurquoise,
-                                  ),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          device['deviceName']?.toString() ??
-                                              (en
-                                                  ? 'Mobile device'
-                                                  : 'Mobil cihaz'),
-                                          style: TextStyle(
-                                            color: textColor,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                        Text(
-                                          en
-                                              ? 'Last active: ${_formatSessionTime(device['lastActiveAt'])}'
-                                              : 'Son aktiflik: ${_formatSessionTime(device['lastActiveAt'])}',
-                                          style: TextStyle(
-                                            color: subTextColor,
-                                            fontSize: 12,
-                                          ),
-                                        ),
-                                        if (device['isCurrentDevice'] == true)
-                                          Text(
-                                            en ? 'This device' : 'Bu cihaz',
-                                            style: const TextStyle(
-                                              color: AppColors.neonTurquoise,
-                                              fontSize: 12,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  OutlinedButton.icon(
-                    onPressed: _isLoggingOut ? null : _logoutAllDevices,
-                    icon: const Icon(Icons.logout),
-                    label: Text(
-                      en
-                          ? 'Log out from all devices'
-                          : 'Tüm cihazlardan çıkış yap',
-                    ),
-                  ),
-                  const SizedBox(height: 20),
                   SwitchListTile(
                     tileColor: cardBg,
                     shape: RoundedRectangleBorder(
@@ -541,6 +439,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         en ? 'Download my data' : 'Kişisel verilerimi indir'),
                   ),
                   const SizedBox(height: 24),
+                  _activeDevicesSection(
+                    en: en,
+                    cardBg: cardBg,
+                    textColor: textColor,
+                    subTextColor: subTextColor,
+                  ),
+                  const SizedBox(height: 24),
                   SizedBox(
                     height: 52,
                     child: OutlinedButton(
@@ -559,6 +464,129 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ],
               ),
             ),
+    );
+  }
+
+  Widget _activeDevicesSection({
+    required bool en,
+    required Color cardBg,
+    required Color textColor,
+    required Color subTextColor,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: cardBg,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.devices, color: AppColors.neonTurquoise),
+              const SizedBox(width: 10),
+              Text(
+                en ? 'Active devices' : 'Aktif cihazlar',
+                style: TextStyle(
+                  color: textColor,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: AppColors.neonTurquoise.withValues(alpha: .14),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: AppColors.neonTurquoise.withValues(alpha: .45),
+                  ),
+                ),
+                child: Text(
+                  '${_deviceSessions.length}',
+                  style: const TextStyle(
+                    color: AppColors.neonTurquoise,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          if (_deviceSessions.isEmpty)
+            Text(
+              en
+                  ? 'No active device session was found.'
+                  : 'Aktif cihaz oturumu bulunamadı.',
+              style: TextStyle(color: subTextColor),
+            )
+          else
+            ..._deviceSessions.map(
+              (device) => Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(
+                      device['isCurrentDevice'] == true
+                          ? Icons.smartphone
+                          : Icons.devices_other,
+                      color: AppColors.neonTurquoise,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            device['deviceName']?.toString() ??
+                                (en ? 'Mobile device' : 'Mobil cihaz'),
+                            style: TextStyle(
+                              color: textColor,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          Text(
+                            en
+                                ? 'Last active: ${_formatSessionTime(device['lastActiveAt'])}'
+                                : 'Son aktiflik: ${_formatSessionTime(device['lastActiveAt'])}',
+                            style: TextStyle(
+                              color: subTextColor,
+                              fontSize: 12,
+                            ),
+                          ),
+                          if (device['isCurrentDevice'] == true)
+                            Text(
+                              en ? 'This device' : 'Bu cihaz',
+                              style: const TextStyle(
+                                color: AppColors.neonTurquoise,
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          const SizedBox(height: 6),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: _isLoggingOut ? null : _logoutAllDevices,
+              icon: const Icon(Icons.logout),
+              label: Text(
+                en ? 'Log out from all devices' : 'Tüm cihazlardan çıkış yap',
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
