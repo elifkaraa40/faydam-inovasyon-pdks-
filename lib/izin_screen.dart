@@ -87,6 +87,32 @@ class _IzinScreenState extends State<IzinScreen> {
     }
   }
 
+  String _dayPortion(Object? value) {
+    switch (value?.toString()) {
+      case 'FullDay':
+      case '1':
+        return 'Tam gün';
+      case 'FirstHalf':
+      case '2':
+        return 'İlk yarım gün';
+      case 'SecondHalf':
+      case '3':
+        return 'İkinci yarım gün';
+      default:
+        return value?.toString() ?? 'Tam gün';
+    }
+  }
+
+  String _workDayCount(Object? value) {
+    final count = value is num
+        ? value.toDouble()
+        : double.tryParse(value?.toString() ?? '');
+    if (count == null) return '—';
+    return count == count.roundToDouble()
+        ? count.toInt().toString()
+        : count.toStringAsFixed(1).replaceAll('.', ',');
+  }
+
   bool _pending(Object? value) =>
       value?.toString() == 'Pending' || value?.toString() == '1';
 
@@ -97,11 +123,14 @@ class _IzinScreenState extends State<IzinScreen> {
 
   Future<void> _showCreateForm({
     String initialType = 'Annual',
+    String initialDayPortion = 'FullDay',
     String initialReason = '',
   }) async {
     String type = initialType;
-    DateTime start = DateTime.now();
-    DateTime end = DateTime.now();
+    String dayPortion = initialDayPortion;
+    final today = DateUtils.dateOnly(DateTime.now());
+    DateTime start = today;
+    DateTime end = today;
     final reason = TextEditingController(text: initialReason);
     String? reasonError;
     final submitted = await showDialog<bool>(
@@ -126,25 +155,79 @@ class _IzinScreenState extends State<IzinScreen> {
                   ],
                   onChanged: (value) => setDialogState(() => type = value!),
                 ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
+                  initialValue: dayPortion,
+                  decoration: const InputDecoration(labelText: 'İzin süresi'),
+                  items: const [
+                    DropdownMenuItem(
+                      value: 'FullDay',
+                      child: Text('Tam gün'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'FirstHalf',
+                      child: Text('İlk yarım gün'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'SecondHalf',
+                      child: Text('İkinci yarım gün'),
+                    ),
+                  ],
+                  onChanged: (value) {
+                    if (value == null) return;
+                    setDialogState(() {
+                      dayPortion = value;
+                      if (dayPortion != 'FullDay') end = start;
+                    });
+                  },
+                ),
                 ListTile(
-                  title: const Text('Tarih aralığı'),
-                  subtitle: Text('${_date(start)} – ${_date(end)}'),
+                  title: Text(dayPortion == 'FullDay'
+                      ? 'Tarih aralığı'
+                      : 'İzin tarihi'),
+                  subtitle: Text(dayPortion == 'FullDay'
+                      ? '${_date(start)} – ${_date(end)}'
+                      : _date(start)),
                   leading: const Icon(Icons.date_range),
                   onTap: () async {
-                    final range = await showDateRangePicker(
-                      context: context,
-                      firstDate: DateTime.now(),
-                      lastDate: DateTime.now().add(const Duration(days: 365)),
-                      initialDateRange: DateTimeRange(start: start, end: end),
-                    );
-                    if (range != null) {
-                      setDialogState(() {
-                        start = range.start;
-                        end = range.end;
-                      });
+                    final lastDate = today.add(const Duration(days: 365));
+                    if (dayPortion == 'FullDay') {
+                      final range = await showDateRangePicker(
+                        context: context,
+                        firstDate: today,
+                        lastDate: lastDate,
+                        initialDateRange: DateTimeRange(start: start, end: end),
+                      );
+                      if (range != null) {
+                        setDialogState(() {
+                          start = range.start;
+                          end = range.end;
+                        });
+                      }
+                    } else {
+                      final date = await showDatePicker(
+                        context: context,
+                        firstDate: today,
+                        lastDate: lastDate,
+                        initialDate: start,
+                      );
+                      if (date != null) {
+                        setDialogState(() {
+                          start = date;
+                          end = date;
+                        });
+                      }
                     }
                   },
                 ),
+                if (dayPortion != 'FullDay')
+                  const Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      'Yarım gün izin için tek bir tarih seçilir.',
+                      style: TextStyle(fontSize: 12),
+                    ),
+                  ),
                 TextField(
                   controller: reason,
                   onChanged: (_) {
@@ -196,7 +279,7 @@ class _IzinScreenState extends State<IzinScreen> {
         startDate: _date(start),
         endDate: _date(end),
         reason: reasonText,
-        dayPortion: 'FullDay',
+        dayPortion: dayPortion,
       );
       await _load();
     } on ApiException catch (error) {
@@ -207,6 +290,7 @@ class _IzinScreenState extends State<IzinScreen> {
         if (tryAnotherDate && mounted) {
           await _showCreateForm(
             initialType: type,
+            initialDayPortion: dayPortion,
             initialReason: reasonText,
           );
         }
@@ -385,7 +469,9 @@ class _IzinScreenState extends State<IzinScreen> {
                                         color: textColor,
                                         fontWeight: FontWeight.bold)),
                                 subtitle: Text(
-                                  '${item['startDate'] ?? ''} - ${item['endDate'] ?? ''}\n${item['reason'] ?? ''}\nDurum: ${_status(status)}',
+                                  '${item['startDate'] ?? ''} - ${item['endDate'] ?? ''}'
+                                  '\n${_workDayCount(item['workDayCount'])} iş günü • ${_dayPortion(item['dayPortion'])} • ${_status(status)}'
+                                  '\n${item['reason'] ?? ''}',
                                   style: TextStyle(
                                       color: textColor.withValues(alpha: .7)),
                                 ),
