@@ -9,10 +9,16 @@ import '../config/api_config.dart';
 import '../models/break_models.dart';
 
 class ApiException implements Exception {
-  const ApiException(this.message, {this.code, this.statusCode});
+  const ApiException(
+    this.message, {
+    this.code,
+    this.statusCode,
+    this.errors,
+  });
   final String message;
   final String? code;
   final int? statusCode;
+  final Map<String, dynamic>? errors;
   @override
   String toString() => message;
 }
@@ -544,8 +550,12 @@ class ApiService {
   ApiException _errorFrom(http.Response response) {
     try {
       final data = _map(jsonDecode(utf8.decode(response.bodyBytes)));
+      final rawErrors = data['errors'];
       return ApiException(data['message']?.toString() ?? 'İşlem başarısız.',
-          code: data['code']?.toString(), statusCode: response.statusCode);
+          code: data['code']?.toString(),
+          statusCode: response.statusCode,
+          errors:
+              rawErrors is Map ? Map<String, dynamic>.from(rawErrors) : null);
     } catch (_) {
       return ApiException('İşlem başarısız (${response.statusCode}).',
           statusCode: response.statusCode);

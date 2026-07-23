@@ -71,35 +71,22 @@ class _WorkLocationScreenState extends State<WorkLocationScreen> {
                 ),
                 ListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: const Text('Başlangıç'),
-                  subtitle: Text(_date(start)),
+                  leading: const Icon(Icons.date_range),
+                  title: const Text('Tarih aralığı'),
+                  subtitle: Text('${_date(start)} – ${_date(end)}'),
                   onTap: () async {
-                    final value = await showDatePicker(
+                    final range = await showDateRangePicker(
                       context: context,
                       firstDate: DateTime.now(),
                       lastDate: DateTime.now().add(const Duration(days: 365)),
-                      initialDate: start,
+                      initialDateRange: DateTimeRange(start: start, end: end),
                     );
-                    if (value != null) {
+                    if (range != null) {
                       setDialogState(() {
-                        start = value;
-                        if (end.isBefore(start)) end = start;
+                        start = range.start;
+                        end = range.end;
                       });
                     }
-                  },
-                ),
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('Bitiş'),
-                  subtitle: Text(_date(end)),
-                  onTap: () async {
-                    final value = await showDatePicker(
-                      context: context,
-                      firstDate: start,
-                      lastDate: DateTime.now().add(const Duration(days: 365)),
-                      initialDate: end,
-                    );
-                    if (value != null) setDialogState(() => end = value);
                   },
                 ),
                 TextField(

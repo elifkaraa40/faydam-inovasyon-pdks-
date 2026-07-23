@@ -45,21 +45,14 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   Future<void> _pickRange() async {
     final firstDate = DateTime.now().subtract(const Duration(days: 365 * 2));
     final lastDate = DateTime.now();
-    final start = await showDatePicker(
+    final range = await showDateRangePicker(
       context: context,
       firstDate: firstDate,
       lastDate: lastDate,
-      initialDate: _from,
+      initialDateRange: DateTimeRange(start: _from, end: _to),
     );
-    if (start == null || !mounted) return;
-    final end = await showDatePicker(
-      context: context,
-      firstDate: start,
-      lastDate: lastDate,
-      initialDate: _to.isBefore(start) ? start : _to,
-    );
-    if (end == null || !mounted) return;
-    if (end.difference(start).inDays > 89) {
+    if (range == null || !mounted) return;
+    if (range.duration.inDays > 89) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
             content: Text('Tarih aralığı en fazla 90 gün olabilir.')),
@@ -67,8 +60,8 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       return;
     }
     setState(() {
-      _from = start;
-      _to = end;
+      _from = range.start;
+      _to = range.end;
     });
     await _load();
   }

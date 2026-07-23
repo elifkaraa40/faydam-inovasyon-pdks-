@@ -1,8 +1,6 @@
-// ignore_for_file: unused_import
-
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
-import 'package:intl/date_symbol_data_local.dart';
 
 import 'app_provider.dart';
 import 'session_gate.dart';
@@ -29,6 +27,16 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'İlk Mobil Uygulamam',
       debugShowCheckedModeBanner: false,
+      locale: settings.isEnglish ? const Locale('en') : const Locale('tr'),
+      supportedLocales: const [
+        Locale('tr'),
+        Locale('en'),
+      ],
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
 
       // Karanlık ve Aydınlık Tema Ayarları
       themeMode: settings.isDarkMode ? ThemeMode.dark : ThemeMode.light,
