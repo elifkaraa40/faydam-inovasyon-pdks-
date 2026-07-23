@@ -73,6 +73,26 @@ class _LoginScreenState extends State<LoginScreen> {
             user['email'].toString(),
             user['role']?.toString() ?? 'Personel',
           );
+      final deviceNotice = response['deviceSessionNotice']?.toString();
+      if (response['previousDeviceSessionRevoked'] == true &&
+          deviceNotice != null &&
+          deviceNotice.isNotEmpty) {
+        await showDialog<void>(
+          context: context,
+          barrierDismissible: false,
+          builder: (dialogContext) => AlertDialog(
+            title: const Text('Cihaz oturumu güncellendi'),
+            content: Text(deviceNotice),
+            actions: [
+              FilledButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: const Text('Devam et'),
+              ),
+            ],
+          ),
+        );
+        if (!mounted) return;
+      }
       final isActive = user['accountStatus']?.toString() == 'Active';
       final isManager = user['role']?.toString().toLowerCase() == 'yonetici';
       Navigator.of(context).pushAndRemoveUntil(

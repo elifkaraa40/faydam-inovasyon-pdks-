@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
+import 'package:uuid/uuid.dart';
 
 import '../config/api_config.dart';
 import '../models/break_models.dart';
@@ -27,19 +28,23 @@ class ApiService {
   static const _accessTokenKey = 'access_token';
   static const _refreshTokenKey = 'refresh_token';
   static const _userKey = 'authenticated_user';
+  static const _deviceIdKey = 'device_installation_id';
   static String? _accessTokenCache;
   static String? _refreshTokenCache;
+  static String? _deviceIdCache;
   static Map<String, dynamic>? _userCache;
 
   Future<Map<String, dynamic>> login(
       {required String email,
       required String password,
       String? deviceName}) async {
+    final deviceId = await getDeviceId();
     final data = _map(await _send('POST', '/auth/login',
         body: {
           'email': email,
           'password': password,
-          'deviceName': deviceName,
+          'deviceId': deviceId,
+          'deviceName': deviceName ?? 'Faydam PDKS Mobil',
         },
         authenticated: false));
     await _saveSession(data);
@@ -51,12 +56,14 @@ class ApiService {
       required String email,
       required String password,
       String? deviceName}) async {
+    final deviceId = await getDeviceId();
     final data = _map(await _send('POST', '/auth/register',
         body: {
           'fullName': fullName,
           'email': email,
           'password': password,
-          'deviceName': deviceName,
+          'deviceId': deviceId,
+          'deviceName': deviceName ?? 'Faydam PDKS Mobil',
         },
         authenticated: false));
     await _saveSession(data);
@@ -64,14 +71,17 @@ class ApiService {
   }
 
   Future<Map<String, dynamic>> scanAttendanceQr(
-          {required String qrValue,
-          required String occurredAt,
-          required String deviceEventId}) async =>
-      _map(await _send('POST', '/qr-attendance/scan', body: {
-        'qrValue': qrValue,
-        'occurredAt': occurredAt,
-        'deviceEventId': deviceEventId,
-      }));
+      {required String qrValue,
+      required String occurredAt,
+      required String deviceEventId}) async {
+    final deviceId = await getDeviceId();
+    return _map(await _send('POST', '/qr-attendance/scan', body: {
+      'qrValue': qrValue,
+      'occurredAt': occurredAt,
+      'deviceEventId': deviceEventId,
+      'deviceId': deviceId,
+    }));
+  }
 
   Future<Map<String, dynamic>> getTodayAttendance() async =>
       _map(await _send('GET', '/attendance/today'));
@@ -234,9 +244,13 @@ class ApiService {
   Future<List<Map<String, dynamic>>> getAttendanceCorrections() async {
     final value = await _send('GET', '/attendance-corrections');
     if (value is! List) {
-      throw const ApiException('Sunucudan geçersiz puantaj düzeltme listesi alındı.');
+      throw const ApiException(
+          'Sunucudan geçersiz puantaj düzeltme listesi alındı.');
     }
-    return value.whereType<Map>().map((item) => Map<String, dynamic>.from(item)).toList();
+    return value
+        .whereType<Map>()
+        .map((item) => Map<String, dynamic>.from(item))
+        .toList();
   }
 
   Future<void> createAttendanceCorrection({
@@ -273,6 +287,26 @@ class ApiService {
 
   Future<Map<String, dynamic>> getAccountStatus() async =>
       _map(await _send('GET', '/me/status'));
+
+  Future<List<Map<String, dynamic>>> getDeviceSessions() async {
+    final value = await _send('GET', '/auth/devices');
+    if (value is! List) {
+      throw const ApiException(
+          'Sunucudan geçersiz cihaz oturumu listesi alındı.');
+    }
+    return value
+        .whereType<Map>()
+        .map((item) => Map<String, dynamic>.from(item))
+        .toList();
+  }
+
+  Future<void> logoutAllDevices() async {
+    try {
+      await _send('POST', '/auth/logout-all');
+    } finally {
+      await clearSession();
+    }
+  }
 
   Future<Map<String, dynamic>> getManagerDashboard() async =>
       _map(await _send('GET', '/manager/dashboard'));
@@ -340,10 +374,11 @@ class ApiService {
 
   Future<void> logout() async {
     final refreshToken = await _getRefreshToken();
+    final deviceId = await getDeviceId();
     try {
       if (refreshToken != null) {
         await _send('POST', '/auth/logout',
-            body: {'refreshToken': refreshToken});
+            body: {'refreshToken': refreshToken, 'deviceId': deviceId});
       }
     } finally {
       await clearSession();
@@ -364,6 +399,7 @@ class ApiService {
             code: 'UNAUTHENTICATED');
       }
       headers['Authorization'] = 'Bearer $token';
+      headers['X-Device-Id'] = await getDeviceId();
     }
     final uri = Uri.parse('$baseUrl$path');
     late http.Response response;
@@ -443,8 +479,10 @@ class ApiService {
     final refreshToken = await _getRefreshToken();
     if (refreshToken == null) return false;
     try {
+      final deviceId = await getDeviceId();
       final data = _map(await _send('POST', '/auth/refresh',
-          body: {'refreshToken': refreshToken}, authenticated: false));
+          body: {'refreshToken': refreshToken, 'deviceId': deviceId},
+          authenticated: false));
       await _saveSession(data);
       return true;
     } catch (_) {
@@ -475,10 +513,24 @@ class ApiService {
     return _refreshTokenCache;
   }
 
+  Future<String> getDeviceId() async {
+    if (_deviceIdCache?.isNotEmpty == true) return _deviceIdCache!;
+    final stored = await _storage.read(key: _deviceIdKey);
+    if (stored?.isNotEmpty == true) {
+      _deviceIdCache = stored;
+      return stored!;
+    }
+    final created = const Uuid().v4();
+    _deviceIdCache = created;
+    await _storage.write(key: _deviceIdKey, value: created);
+    return created;
+  }
+
   String _deviceEventId(String operation) =>
       '$operation-${DateTime.now().microsecondsSinceEpoch}';
 
-  String _timeOnly(String value) => value.trim().split(':').length == 2 ? '${value.trim()}:00' : value.trim();
+  String _timeOnly(String value) =>
+      value.trim().split(':').length == 2 ? '${value.trim()}:00' : value.trim();
 
   String _dateOnly(DateTime date) =>
       '${date.year.toString().padLeft(4, '0')}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';

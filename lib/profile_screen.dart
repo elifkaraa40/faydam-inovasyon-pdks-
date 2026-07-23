@@ -17,6 +17,7 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   final ApiService _apiService = ApiService();
   Map<String, dynamic>? _profile;
+  List<Map<String, dynamic>> _deviceSessions = const [];
   bool _isLoading = true;
   bool _isLoggingOut = false;
   bool _isSaving = false;
@@ -36,8 +37,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
     });
     try {
       final value = await _apiService.getUserProfile();
+      final devices = await _apiService.getDeviceSessions();
       if (!mounted) return;
-      setState(() => _profile = value);
+      setState(() {
+        _profile = value;
+        _deviceSessions = devices
+            .where((device) => device['revokedAt'] == null)
+            .toList(growable: false);
+      });
     } catch (error) {
       if (!mounted) return;
       setState(() => _error = error.toString());
@@ -179,19 +186,86 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  Future<void> _chooseLanguage() async {
-    final selected = await showDialog<String>(context: context, builder: (context) => SimpleDialog(
-      title: const Text('Dil ayarı'),
-      children: ['Türkçe (TR)', 'English (EN)'].map((value) => SimpleDialogOption(onPressed: () => Navigator.pop(context, value), child: Text(value))).toList(),
-    ));
-    if (selected != null && mounted) context.read<AppSettings>().setLanguage(selected);
+  Future<void> _logoutAllDevices() async {
+    if (_isLoggingOut) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Tüm cihazlardan çıkış yap'),
+        content: const Text(
+          'Telefonunuz dahil bu hesaba bağlı tüm cihaz oturumları kapatılacak. Devam etmek istiyor musunuz?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('İptal'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Tümünden çıkış yap'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    setState(() => _isLoggingOut = true);
+    try {
+      await _apiService.logoutAllDevices();
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('$error'), backgroundColor: Colors.redAccent),
+        );
+        setState(() => _isLoggingOut = false);
+      }
+      return;
+    }
+    if (!mounted) return;
+    context.read<AppSettings>().logout();
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const LoginScreen()),
+      (_) => false,
+    );
   }
 
-  void _showSupport() => showDialog<void>(context: context, builder: (context) => AlertDialog(
-    title: const Text('Yardım ve destek'),
-    content: const Text('Bir sorun yaşarsanız yöneticinizle iletişime geçin veya destek ekibine ulaşın.'),
-    actions: [TextButton(onPressed: () => Navigator.pop(context), child: Text('Kapat'))],
-  ));
+  String _formatSessionTime(Object? value) {
+    final parsed = DateTime.tryParse(value?.toString() ?? '');
+    if (parsed == null) return '-';
+    final local = parsed.toLocal();
+    String two(int number) => number.toString().padLeft(2, '0');
+    return '${two(local.day)}.${two(local.month)}.${local.year} '
+        '${two(local.hour)}:${two(local.minute)}';
+  }
+
+  Future<void> _chooseLanguage() async {
+    final selected = await showDialog<String>(
+        context: context,
+        builder: (context) => SimpleDialog(
+              title: const Text('Dil ayarı'),
+              children: ['Türkçe (TR)', 'English (EN)']
+                  .map((value) => SimpleDialogOption(
+                      onPressed: () => Navigator.pop(context, value),
+                      child: Text(value)))
+                  .toList(),
+            ));
+    if (selected != null && mounted) {
+      context.read<AppSettings>().setLanguage(selected);
+    }
+  }
+
+  void _showSupport() => showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+            title: const Text('Yardım ve destek'),
+            content: const Text(
+                'Bir sorun yaşarsanız yöneticinizle iletişime geçin veya destek ekibine ulaşın.'),
+            actions: [
+              TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Kapat'))
+            ],
+          ));
 
   @override
   Widget build(BuildContext context) {
@@ -215,7 +289,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Scaffold(
       backgroundColor: isDark ? AppColors.darkNavy : AppColors.lightBackground,
       appBar: AppBar(
-        title: Text(en ? 'My Profile' : 'Profilim', style: TextStyle(color: textColor)),
+        title: Text(en ? 'My Profile' : 'Profilim',
+            style: TextStyle(color: textColor)),
         centerTitle: true,
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -306,6 +381,108 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                   ),
                   const SizedBox(height: 20),
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: cardBg,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.devices,
+                              color: AppColors.neonTurquoise,
+                            ),
+                            const SizedBox(width: 10),
+                            Text(
+                              en ? 'Active devices' : 'Aktif cihazlar',
+                              style: TextStyle(
+                                color: textColor,
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        if (_deviceSessions.isEmpty)
+                          Text(
+                            en
+                                ? 'No active device session was found.'
+                                : 'Aktif cihaz oturumu bulunamadı.',
+                            style: TextStyle(color: subTextColor),
+                          )
+                        else
+                          ..._deviceSessions.map(
+                            (device) => Padding(
+                              padding: const EdgeInsets.only(bottom: 10),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Icon(
+                                    device['isCurrentDevice'] == true
+                                        ? Icons.smartphone
+                                        : Icons.devices_other,
+                                    color: AppColors.neonTurquoise,
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          device['deviceName']?.toString() ??
+                                              (en
+                                                  ? 'Mobile device'
+                                                  : 'Mobil cihaz'),
+                                          style: TextStyle(
+                                            color: textColor,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                        Text(
+                                          en
+                                              ? 'Last active: ${_formatSessionTime(device['lastActiveAt'])}'
+                                              : 'Son aktiflik: ${_formatSessionTime(device['lastActiveAt'])}',
+                                          style: TextStyle(
+                                            color: subTextColor,
+                                            fontSize: 12,
+                                          ),
+                                        ),
+                                        if (device['isCurrentDevice'] == true)
+                                          Text(
+                                            en ? 'This device' : 'Bu cihaz',
+                                            style: const TextStyle(
+                                              color: AppColors.neonTurquoise,
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  OutlinedButton.icon(
+                    onPressed: _isLoggingOut ? null : _logoutAllDevices,
+                    icon: const Icon(Icons.logout),
+                    label: Text(
+                      en
+                          ? 'Log out from all devices'
+                          : 'Tüm cihazlardan çıkış yap',
+                    ),
+                  ),
+                  const SizedBox(height: 20),
                   SwitchListTile(
                     tileColor: cardBg,
                     shape: RoundedRectangleBorder(
@@ -320,19 +497,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   const SizedBox(height: 10),
                   ListTile(
                     tileColor: cardBg,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                    leading: const Icon(Icons.language, color: AppColors.neonTurquoise),
-                    title: Text(en ? 'Language' : 'Dil ayarı', style: TextStyle(color: textColor)),
-                    subtitle: Text(settings.language, style: TextStyle(color: subTextColor)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16)),
+                    leading: const Icon(Icons.language,
+                        color: AppColors.neonTurquoise),
+                    title: Text(en ? 'Language' : 'Dil ayarı',
+                        style: TextStyle(color: textColor)),
+                    subtitle: Text(settings.language,
+                        style: TextStyle(color: subTextColor)),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: _chooseLanguage,
                   ),
                   const SizedBox(height: 10),
                   ListTile(
                     tileColor: cardBg,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                    leading: const Icon(Icons.help_outline, color: AppColors.neonTurquoise),
-                    title: Text(en ? 'Help & Support' : 'Yardım ve destek', style: TextStyle(color: textColor)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16)),
+                    leading: const Icon(Icons.help_outline,
+                        color: AppColors.neonTurquoise),
+                    title: Text(en ? 'Help & Support' : 'Yardım ve destek',
+                        style: TextStyle(color: textColor)),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: _showSupport,
                   ),
@@ -340,7 +524,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   OutlinedButton.icon(
                     onPressed: _isSaving ? null : _editAccount,
                     icon: const Icon(Icons.manage_accounts),
-                    label: Text(_isSaving ? (en ? 'Saving...' : 'Kaydediliyor...') : (en ? 'Account settings' : 'Hesap ayarları')),
+                    label: Text(_isSaving
+                        ? (en ? 'Saving...' : 'Kaydediliyor...')
+                        : (en ? 'Account settings' : 'Hesap ayarları')),
                   ),
                   const SizedBox(height: 10),
                   OutlinedButton.icon(
@@ -351,7 +537,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
                         : const Icon(Icons.download_outlined),
-                    label: Text(en ? 'Download my data' : 'Kişisel verilerimi indir'),
+                    label: Text(
+                        en ? 'Download my data' : 'Kişisel verilerimi indir'),
                   ),
                   const SizedBox(height: 24),
                   SizedBox(
@@ -366,7 +553,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       child: _isLoggingOut
                           ? const CircularProgressIndicator()
                           : Text(en ? 'Log out' : 'Çıkış Yap',
-                              style: TextStyle(color: Colors.redAccent)),
+                              style: const TextStyle(color: Colors.redAccent)),
                     ),
                   ),
                 ],
