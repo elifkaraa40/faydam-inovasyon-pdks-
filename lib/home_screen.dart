@@ -140,6 +140,7 @@ class _HomeScreenState extends State<HomeScreen> {
       'exitTime',
       'endTime'
     ]));
+    final status = _firstValue(['status', 'attendanceStatus', 'dayStatus']) ?? 'Kayıt yok';
 
     return Scaffold(
       backgroundColor: isDark ? AppColors.darkNavy : AppColors.lightBackground,
@@ -236,6 +237,20 @@ class _HomeScreenState extends State<HomeScreen> {
               if (!_isLoading && _error == null)
                 _card(
                   cardBg,
+                  Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                    Text('Güncel Durum', style: TextStyle(color: textColor, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 12),
+                    _statusLine('Son QR girişi', checkIn, Icons.login, textColor, subTextColor),
+                    const SizedBox(height: 8),
+                    _statusLine('Son QR çıkışı', checkOut, Icons.logout, textColor, subTextColor),
+                    const SizedBox(height: 8),
+                    _statusLine('Durum', status, Icons.info_outline, textColor, subTextColor),
+                  ]),
+                ),
+              const SizedBox(height: 12),
+              if (!_isLoading && _error == null)
+                _card(
+                  cardBg,
                   Wrap(
                     spacing: 24,
                     runSpacing: 16,
@@ -279,6 +294,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   color: text, fontWeight: FontWeight.bold, fontSize: 18)),
         ],
       );
+
+  Widget _statusLine(String label, String value, IconData icon, Color text, Color subText) =>
+      Row(children: [Icon(icon, color: AppColors.neonTurquoise, size: 20), const SizedBox(width: 10), Expanded(child: Text(label, style: TextStyle(color: subText))), Text(value, style: TextStyle(color: text, fontWeight: FontWeight.bold))]);
 
   String _minutes(String key) {
     final value = (_attendance?[key] as num?)?.toInt();

@@ -231,6 +231,30 @@ class ApiService {
     throw const ApiException('Sunucudan geçersiz izin listesi alındı.');
   }
 
+  Future<List<Map<String, dynamic>>> getAttendanceCorrections() async {
+    final value = await _send('GET', '/attendance-corrections');
+    if (value is! List) {
+      throw const ApiException('Sunucudan geçersiz puantaj düzeltme listesi alındı.');
+    }
+    return value.whereType<Map>().map((item) => Map<String, dynamic>.from(item)).toList();
+  }
+
+  Future<void> createAttendanceCorrection({
+    required DateTime workDate,
+    required String requestedEntry,
+    required String requestedExit,
+    required String reason,
+  }) async {
+    await _send('POST', '/attendance-corrections', body: {
+      'correctionType': 1,
+      'workDate': _dateOnly(workDate),
+      // System.Text.Json'ın TimeOnly dönüştürücüsü saniye bilgisini bekler.
+      'requestedEntry': _timeOnly(requestedEntry),
+      'requestedExit': _timeOnly(requestedExit),
+      'reason': reason,
+    });
+  }
+
   Future<Map<String, dynamic>> getUserProfile() async =>
       _map(await _send('GET', '/me'));
 
@@ -453,6 +477,8 @@ class ApiService {
 
   String _deviceEventId(String operation) =>
       '$operation-${DateTime.now().microsecondsSinceEpoch}';
+
+  String _timeOnly(String value) => value.trim().split(':').length == 2 ? '${value.trim()}:00' : value.trim();
 
   String _dateOnly(DateTime date) =>
       '${date.year.toString().padLeft(4, '0')}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';

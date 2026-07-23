@@ -179,6 +179,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
+  Future<void> _chooseLanguage() async {
+    final selected = await showDialog<String>(context: context, builder: (context) => SimpleDialog(
+      title: const Text('Dil ayarı'),
+      children: ['Türkçe (TR)', 'English (EN)'].map((value) => SimpleDialogOption(onPressed: () => Navigator.pop(context, value), child: Text(value))).toList(),
+    ));
+    if (selected != null && mounted) context.read<AppSettings>().setLanguage(selected);
+  }
+
+  void _showSupport() => showDialog<void>(context: context, builder: (context) => AlertDialog(
+    title: const Text('Yardım ve destek'),
+    content: const Text('Bir sorun yaşarsanız yöneticinizle iletişime geçin veya destek ekibine ulaşın.'),
+    actions: [TextButton(onPressed: () => Navigator.pop(context), child: Text('Kapat'))],
+  ));
+
   @override
   Widget build(BuildContext context) {
     final settings = context.watch<AppSettings>();
@@ -301,6 +315,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         color: AppColors.neonTurquoise),
                     title:
                         Text('Koyu Tema', style: TextStyle(color: textColor)),
+                  ),
+                  const SizedBox(height: 10),
+                  ListTile(
+                    tileColor: cardBg,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    leading: const Icon(Icons.language, color: AppColors.neonTurquoise),
+                    title: Text('Dil ayarı', style: TextStyle(color: textColor)),
+                    subtitle: Text(settings.language, style: TextStyle(color: subTextColor)),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: _chooseLanguage,
+                  ),
+                  const SizedBox(height: 10),
+                  ListTile(
+                    tileColor: cardBg,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    leading: const Icon(Icons.help_outline, color: AppColors.neonTurquoise),
+                    title: Text('Yardım ve destek', style: TextStyle(color: textColor)),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: _showSupport,
                   ),
                   const SizedBox(height: 24),
                   OutlinedButton.icon(

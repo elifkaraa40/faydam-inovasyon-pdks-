@@ -5,6 +5,7 @@ import 'app_provider.dart';
 import 'izin_screen.dart';
 import 'mola_screen.dart';
 import 'work_location_screen.dart';
+import 'attendance_correction_screen.dart';
 
 class EmployeeActionsScreen extends StatelessWidget {
   const EmployeeActionsScreen({super.key});
@@ -47,6 +48,14 @@ class EmployeeActionsScreen extends StatelessWidget {
             textColor: text,
             dark: dark,
             onTap: () => _open(context, const WorkLocationScreen()),
+          ),
+          _ActionCard(
+            title: 'Puantaj Düzeltme Talebi',
+            description: 'Eksik veya hatalı giriş-çıkış kaydı için talep oluşturun.',
+            icon: Icons.edit_calendar_outlined,
+            textColor: text,
+            dark: dark,
+            onTap: () => _open(context, const AttendanceCorrectionScreen()),
           ),
         ],
       ),

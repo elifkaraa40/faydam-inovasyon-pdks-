@@ -16,6 +16,9 @@ class _IzinScreenState extends State<IzinScreen> {
   List<Map<String, dynamic>> _requests = [];
   bool _isLoading = true;
   String? _error;
+  String _statusFilter = 'all';
+  DateTime? _fromFilter;
+  DateTime? _toFilter;
 
   @override
   void initState() {
@@ -217,6 +220,16 @@ class _IzinScreenState extends State<IzinScreen> {
   String _date(DateTime value) =>
       '${value.year.toString().padLeft(4, '0')}-${value.month.toString().padLeft(2, '0')}-${value.day.toString().padLeft(2, '0')}';
 
+  List<Map<String, dynamic>> get _filteredRequests => _requests.where((item) {
+    final status = item['status']?.toString();
+    if (_statusFilter != 'all' && !_statusFilter.contains(status ?? '')) return false;
+    final start = DateTime.tryParse(item['startDate']?.toString() ?? '');
+    final end = DateTime.tryParse(item['endDate']?.toString() ?? '');
+    if (_fromFilter != null && end != null && end.isBefore(_fromFilter!)) return false;
+    if (_toFilter != null && start != null && start.isAfter(_toFilter!)) return false;
+    return true;
+  }).toList();
+
   @override
   Widget build(BuildContext context) {
     final settings = context.watch<AppSettings>();
@@ -241,17 +254,20 @@ class _IzinScreenState extends State<IzinScreen> {
                       style: const TextStyle(color: Colors.redAccent)))
               : RefreshIndicator(
                   onRefresh: _load,
-                  child: _requests.isEmpty
-                      ? ListView(children: const [
+                  child: ListView(
+                    padding: const EdgeInsets.all(16),
+                    children: [
+                      Row(children: [Expanded(child: DropdownButtonFormField<String>(initialValue: _statusFilter, decoration: const InputDecoration(labelText: 'Durum'), items: const [DropdownMenuItem(value: 'all', child: Text('Tümü')), DropdownMenuItem(value: 'Pending', child: Text('Bekliyor')), DropdownMenuItem(value: 'Approved', child: Text('Onaylandı')), DropdownMenuItem(value: 'Rejected', child: Text('Reddedildi'))], onChanged: (v) => setState(() => _statusFilter = v ?? 'all'))), const SizedBox(width: 8), IconButton(tooltip: 'Tarih filtresi', onPressed: () async { final range = await showDateRangePicker(context: context, firstDate: DateTime.now().subtract(const Duration(days: 730)), lastDate: DateTime.now().add(const Duration(days: 365)), initialDateRange: _fromFilter != null && _toFilter != null ? DateTimeRange(start: _fromFilter!, end: _toFilter!) : null); if (range != null) setState(() { _fromFilter = range.start; _toFilter = range.end; }); }, icon: const Icon(Icons.date_range))]),
+                      if (_fromFilter != null) Align(alignment: Alignment.centerRight, child: TextButton(onPressed: () => setState(() { _fromFilter = null; _toFilter = null; }), child: const Text('Filtreleri temizle'))),
+                      if (_filteredRequests.isEmpty) ListView(children: const [
                           SizedBox(height: 180),
                           Center(
                               child: Text('Kayıtlı izin talebi bulunmuyor.')),
-                        ])
-                      : ListView.builder(
-                          padding: const EdgeInsets.all(16),
-                          itemCount: _requests.length,
+                        ]) else ListView.builder(
+                          shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
+                          itemCount: _filteredRequests.length,
                           itemBuilder: (context, index) {
-                            final item = _requests[index];
+                            final item = _filteredRequests[index];
                             final status = item['status'];
                             return Card(
                               color: cardColor,
@@ -277,6 +293,8 @@ class _IzinScreenState extends State<IzinScreen> {
                             );
                           },
                         ),
+                    ],
+                  ),
                 ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _showCreateForm,
