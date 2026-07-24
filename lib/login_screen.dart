@@ -8,6 +8,7 @@ import 'manager_main_screen.dart';
 import 'approval_pending_screen.dart';
 import 'register_screen.dart';
 import 'services/api_service.dart';
+import 'widgets/push_notification_session.dart';
 
 // Existing authenticated screens import these legacy color names from this
 // file. Keep the aliases until those screens are migrated to the shared theme.
@@ -98,10 +99,10 @@ class _LoginScreenState extends State<LoginScreen> {
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(
           builder: (_) => !isActive
-              ? const ApprovalPendingScreen()
+              ? const PushNotificationSession(child: ApprovalPendingScreen())
               : isManager
-                  ? const ManagerMainScreen()
-                  : const MainScreen(),
+                  ? const PushNotificationSession(child: ManagerMainScreen())
+                  : const PushNotificationSession(child: MainScreen()),
         ),
         (route) => false,
       );

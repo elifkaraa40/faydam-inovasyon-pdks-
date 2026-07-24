@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "726571586938",
+    "project_id": "faydam-pdks",
+    "storage_bucket": "faydam-pdks.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:726571586938:android:3bd163f1875118ea1bb2c3",
+        "android_client_info": {
+          "package_name": "com.faydam.pdkspro"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAJukCPUnftN9yW6LpWwZq6WCTYhUdeO14"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

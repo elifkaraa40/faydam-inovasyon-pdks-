@@ -7,6 +7,7 @@ import 'app_provider.dart' hide AppColors;
 import 'login_screen.dart';
 import 'main_screen.dart';
 import 'services/api_service.dart';
+import 'widgets/push_notification_session.dart';
 
 class ApprovalPendingScreen extends StatefulWidget {
   const ApprovalPendingScreen({super.key});
@@ -71,7 +72,9 @@ class _ApprovalPendingScreenState extends State<ApprovalPendingScreen> {
       return;
     }
     Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => const MainScreen()),
+      MaterialPageRoute(
+        builder: (_) => const PushNotificationSession(child: MainScreen()),
+      ),
       (route) => false,
     );
   }

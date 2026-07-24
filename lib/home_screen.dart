@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import 'app_provider.dart';
 import 'notifications_screen.dart';
 import 'services/api_service.dart';
+import 'widgets/notification_badge_icon.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -173,8 +174,8 @@ class _HomeScreenState extends State<HomeScreen> {
                         builder: (_) => const NotificationsScreen(),
                       ),
                     ),
-                    icon: const Icon(
-                      CupertinoIcons.bell_fill,
+                    icon: const NotificationBadgeIcon(
+                      icon: CupertinoIcons.bell_fill,
                       color: AppColors.neonTurquoise,
                     ),
                   ),

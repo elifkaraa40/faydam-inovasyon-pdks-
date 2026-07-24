@@ -7,6 +7,7 @@ import 'login_screen.dart';
 import 'main_screen.dart';
 import 'manager_main_screen.dart';
 import 'services/api_service.dart';
+import 'widgets/push_notification_session.dart';
 
 class SessionGate extends StatefulWidget {
   const SessionGate({super.key});
@@ -39,9 +40,11 @@ class _SessionGateState extends State<SessionGate> {
         status['canUseApplication'] == true) {
       await _apiService.refreshSession();
       final isManager = user['role']?.toString().toLowerCase() == 'yonetici';
-      return isManager ? const ManagerMainScreen() : const MainScreen();
+      return PushNotificationSession(
+        child: isManager ? const ManagerMainScreen() : const MainScreen(),
+      );
     }
-    return const ApprovalPendingScreen();
+    return const PushNotificationSession(child: ApprovalPendingScreen());
   }
 
   void _retry() {

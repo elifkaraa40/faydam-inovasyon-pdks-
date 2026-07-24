@@ -6,16 +6,19 @@ import 'app_provider.dart';
 import 'profile_screen.dart';
 import 'notifications_screen.dart';
 import 'services/api_service.dart';
+import 'widgets/notification_badge_icon.dart';
 
 class ManagerMainScreen extends StatefulWidget {
-  const ManagerMainScreen({super.key});
+  const ManagerMainScreen({this.initialIndex = 0, super.key});
+
+  final int initialIndex;
 
   @override
   State<ManagerMainScreen> createState() => _ManagerMainScreenState();
 }
 
 class _ManagerMainScreenState extends State<ManagerMainScreen> {
-  int _selectedIndex = 0;
+  late int _selectedIndex = widget.initialIndex.clamp(0, 3);
 
   late final List<Widget> _screens = const [
     _ManagerDashboardScreen(),
@@ -98,7 +101,9 @@ class _ManagerDashboardScreenState extends State<_ManagerDashboardScreen> {
         actions: [
           IconButton(
             tooltip: 'Bildirimler',
-            icon: const Icon(Icons.notifications_outlined),
+            icon: const NotificationBadgeIcon(
+              icon: Icons.notifications_outlined,
+            ),
             onPressed: () => Navigator.of(context).push(
               MaterialPageRoute(builder: (_) => const NotificationsScreen()),
             ),

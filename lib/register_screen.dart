@@ -5,6 +5,7 @@ import 'app_provider.dart';
 import 'approval_pending_screen.dart';
 import 'auth_ui.dart';
 import 'services/api_service.dart';
+import 'widgets/push_notification_session.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -62,7 +63,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
             user['role']?.toString() ?? 'Personel',
           );
       Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const ApprovalPendingScreen()),
+        MaterialPageRoute(
+          builder: (_) =>
+              const PushNotificationSession(child: ApprovalPendingScreen()),
+        ),
         (route) => false,
       );
     } catch (error) {

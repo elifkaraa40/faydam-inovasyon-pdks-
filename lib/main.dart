@@ -4,9 +4,11 @@ import 'package:provider/provider.dart';
 
 import 'app_provider.dart';
 import 'session_gate.dart';
+import 'services/push_notification_service.dart';
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await PushNotificationService.instance.initialize();
 
   runApp(
     ChangeNotifierProvider(
@@ -25,6 +27,8 @@ class MyApp extends StatelessWidget {
     final settings = Provider.of<AppSettings>(context);
 
     return MaterialApp(
+      navigatorKey: appNavigatorKey,
+      scaffoldMessengerKey: appScaffoldMessengerKey,
       title: 'İlk Mobil Uygulamam',
       debugShowCheckedModeBanner: false,
       locale: settings.isEnglish ? const Locale('en') : const Locale('tr'),

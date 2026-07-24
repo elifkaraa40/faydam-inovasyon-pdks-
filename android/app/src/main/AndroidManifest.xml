@@ -5,6 +5,7 @@
 
     <!-- QR kodların kamerayla okutulabilmesi için gereklidir. -->
     <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission
         android:name="android.permission.WRITE_EXTERNAL_STORAGE"
         android:maxSdkVersion="28" />
@@ -47,6 +48,9 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="faydam_updates" />
 
         <provider
             android:name="androidx.core.content.FileProvider"

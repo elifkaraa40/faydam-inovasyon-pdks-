@@ -162,8 +162,10 @@ class ApiService {
   Future<void> cancelWorkLocationRequest(Object id) async =>
       _send('DELETE', '/work-locations/requests/$id');
 
-  Future<List<Map<String, dynamic>>> getNotifications() async {
-    final value = await _send('GET', '/notifications');
+  Future<List<Map<String, dynamic>>> getNotifications({
+    String language = 'tr',
+  }) async {
+    final value = await _send('GET', '/notifications?language=$language');
     if (value is! List) {
       throw const ApiException('Sunucudan geçersiz bildirim listesi alındı.');
     }
@@ -175,6 +177,24 @@ class ApiService {
 
   Future<void> markNotificationRead(Object id) async =>
       _send('POST', '/notifications/$id/read');
+
+  Future<int> getUnreadNotificationCount() async {
+    final value = _map(await _send('GET', '/notifications/unread-count'));
+    return (value['count'] as num?)?.toInt() ?? 0;
+  }
+
+  Future<void> registerPushDevice({
+    required String token,
+    required String language,
+  }) async =>
+      _send('PUT', '/notifications/device', body: {
+        'token': token,
+        'platform': 'android',
+        'language': language,
+      });
+
+  Future<void> unregisterPushDevice() async =>
+      _send('DELETE', '/notifications/device');
 
   Future<CurrentBreak> getCurrentBreak() async => CurrentBreak.fromJson(
         _map(await _send('GET', '/breaks/current')),
@@ -384,6 +404,9 @@ class ApiService {
     final refreshToken = await _getRefreshToken();
     final deviceId = await getDeviceId();
     try {
+      try {
+        await unregisterPushDevice();
+      } catch (_) {}
       if (refreshToken != null) {
         await _send('POST', '/auth/logout',
             body: {'refreshToken': refreshToken, 'deviceId': deviceId});
