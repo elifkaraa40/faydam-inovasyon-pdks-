@@ -10,7 +10,9 @@ import 'app_provider.dart' hide AppColors;
 import 'services/api_service.dart';
 
 class QrScreen extends StatefulWidget {
-  const QrScreen({super.key});
+  const QrScreen({super.key, this.onAttendanceChanged});
+
+  final VoidCallback? onAttendanceChanged;
 
   @override
   State<QrScreen> createState() => _QrScreenState();
@@ -77,6 +79,7 @@ class _QrScreenState extends State<QrScreen>
           _message = response['message']?.toString() ?? 'Puantaj kaydı alındı.';
         }
       });
+      widget.onAttendanceChanged?.call();
     } catch (error) {
       if (!mounted) return;
       setState(() {

@@ -15,15 +15,27 @@ class MainScreen extends StatefulWidget {
 
 class _MainScreenState extends State<MainScreen> {
   int _selectedIndex = 0;
+  late final HomeScreenController _homeController;
+  late final List<Widget> _screens;
 
-  // Başlarındaki 'const' kelimelerini kaldırdık, hata vermesini engelledik!
-  final List<Widget> _screens = [
-    const HomeScreen(),
-    const AttendanceScreen(),
-    const QrScreen(),
-    const EmployeeActionsScreen(),
-    const ProfileScreen(),
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _homeController = HomeScreenController();
+    _screens = [
+      HomeScreen(controller: _homeController),
+      const AttendanceScreen(),
+      QrScreen(onAttendanceChanged: _homeController.refresh),
+      const EmployeeActionsScreen(),
+      const ProfileScreen(),
+    ];
+  }
+
+  @override
+  void dispose() {
+    _homeController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -36,6 +48,9 @@ class _MainScreenState extends State<MainScreen> {
         currentIndex: _selectedIndex,
         type: BottomNavigationBarType.fixed, // Sekmelerin kaymasını engeller
         onTap: (index) {
+          if (index == 0) {
+            _homeController.refresh();
+          }
           setState(() {
             _selectedIndex = index;
           });

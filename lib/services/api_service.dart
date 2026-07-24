@@ -92,6 +92,19 @@ class ApiService {
   Future<Map<String, dynamic>> getTodayAttendance() async =>
       _map(await _send('GET', '/attendance/today'));
 
+  Future<List<Map<String, dynamic>>> getQrAttendanceHistory(
+      {int limit = 20}) async {
+    final value = await _send('GET', '/attendance/qr-history?limit=$limit');
+    if (value is! List) {
+      throw const ApiException(
+          'Sunucudan geçersiz QR işlem geçmişi alındı.');
+    }
+    return value
+        .whereType<Map>()
+        .map((item) => Map<String, dynamic>.from(item))
+        .toList();
+  }
+
   Future<List<Map<String, dynamic>>> getAttendanceRange({
     required DateTime from,
     required DateTime to,
