@@ -2,11 +2,14 @@
 import 'dart:html' as html;
 import 'dart:typed_data';
 
-Future<String> downloadFile(
+import 'downloaded_file.dart';
+
+Future<DownloadedFile> downloadFile(
   Uint8List bytes,
   String fileName,
-  String mimeType,
-) async {
+  String mimeType, {
+  String subdirectory = 'Puantaj',
+}) async {
   final blob = html.Blob([bytes], mimeType);
   final url = html.Url.createObjectUrlFromBlob(blob);
   final anchor = html.AnchorElement(href: url)
@@ -16,5 +19,14 @@ Future<String> downloadFile(
   anchor.click();
   anchor.remove();
   html.Url.revokeObjectUrl(url);
-  return fileName;
+  return DownloadedFile(
+    fileName: fileName,
+    displayLocation: 'Downloads',
+    mimeType: mimeType,
+  );
 }
+
+Future<OpenDownloadedFileResult> openDownloadedFile(
+  DownloadedFile file,
+) async =>
+    OpenDownloadedFileResult.unsupported;

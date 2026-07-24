@@ -114,11 +114,13 @@ class ApiService {
     required DateTime from,
     required DateTime to,
     required String format,
+    required String language,
   }) async {
     final query = Uri(queryParameters: {
       'from': _dateOnly(from),
       'to': _dateOnly(to),
       'format': format,
+      'language': language,
     }).query;
     return _getBytes('/attendance/export?$query');
   }

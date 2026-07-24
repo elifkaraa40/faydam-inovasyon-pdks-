@@ -18,7 +18,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   late DateTime _from = _to.subtract(const Duration(days: 29));
   List<Map<String, dynamic>> _rows = [];
   bool _loading = true;
-  bool _exporting = false;
+  String? _exportingFormat;
   String? _error;
 
   @override
@@ -67,17 +67,19 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   }
 
   Future<void> _export(String format) async {
-    if (_exporting) return;
-    setState(() => _exporting = true);
+    if (_exportingFormat != null) return;
+    final en = context.read<AppSettings>().isEnglish;
+    setState(() => _exportingFormat = format);
     try {
       final bytes = await _api.exportAttendance(
         from: _from,
         to: _to,
         format: format,
+        language: en ? 'en' : 'tr',
       );
       final fileName =
           'puantajim-${_compactDate(_from)}-${_compactDate(_to)}.$format';
-      final path = await downloadFile(
+      final file = await downloadFile(
         bytes,
         fileName,
         format == 'pdf'
@@ -85,22 +87,103 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
             : format == 'xlsx'
                 ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
                 : 'text/csv;charset=utf-8',
+        subdirectory: 'Puantaj',
       );
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Puantaj dosyası hazırlandı: $path')),
-        );
+        await _showFileReady(file, en);
       }
     } catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('$error'), backgroundColor: Colors.redAccent),
+          SnackBar(
+            content: Text(
+              en
+                  ? 'The file could not be downloaded: $error'
+                  : 'Dosya indirilemedi: $error',
+            ),
+            backgroundColor: Colors.redAccent,
+          ),
         );
       }
     } finally {
-      if (mounted) setState(() => _exporting = false);
+      if (mounted) setState(() => _exportingFormat = null);
     }
   }
+
+  Future<void> _showFileReady(DownloadedFile file, bool en) async {
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(en ? 'File ready' : 'Dosya hazır'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              en ? 'File name' : 'Dosya adı',
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 4),
+            SelectableText(file.fileName),
+            const SizedBox(height: 14),
+            Text(
+              en ? 'Saved folder' : 'Kaydedilen klasör',
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 4),
+            SelectableText(file.displayLocation),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text(en ? 'Close' : 'Kapat'),
+          ),
+          FilledButton.icon(
+            onPressed: () async {
+              final result = await openDownloadedFile(file);
+              if (!dialogContext.mounted) return;
+              if (result == OpenDownloadedFileResult.opened) {
+                Navigator.pop(dialogContext);
+                return;
+              }
+              Navigator.pop(dialogContext);
+              if (!mounted) return;
+              await _showFileOpenError(result, en);
+            },
+            icon: const Icon(Icons.open_in_new),
+            label: Text(en ? 'Open file' : 'Dosyayı aç'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showFileOpenError(
+    OpenDownloadedFileResult result,
+    bool en,
+  ) =>
+      showDialog<void>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: Text(en ? 'File could not be opened' : 'Dosya açılamadı'),
+          content: Text(
+            result == OpenDownloadedFileResult.noApplication
+                ? (en
+                    ? 'No application capable of opening this file was found on the device.'
+                    : 'Cihazda bu dosyayı açabilecek uygun bir uygulama bulunamadı.')
+                : (en
+                    ? 'An error occurred while opening the file. You can access it from the saved folder.'
+                    : 'Dosya açılırken bir hata oluştu. Dosyaya kaydedilen klasörden erişebilirsiniz.'),
+          ),
+          actions: [
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: Text(en ? 'Close' : 'Kapat'),
+            ),
+          ],
+        ),
+      );
 
   String _date(DateTime value) =>
       '${value.day.toString().padLeft(2, '0')}.${value.month.toString().padLeft(2, '0')}.${value.year}';
@@ -160,7 +243,8 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
               children: [
                 Expanded(
                   child: ElevatedButton(
-                    onPressed: _exporting ? null : () => _export('csv'),
+                    onPressed:
+                        _exportingFormat != null ? null : () => _export('csv'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.white,
                       foregroundColor: AppColors.darkNavy,
@@ -168,13 +252,17 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                       minimumSize: const Size.fromHeight(44),
                       padding: const EdgeInsets.symmetric(horizontal: 4),
                     ),
-                    child: Text(en ? 'Download CSV' : 'CSV indir'),
+                    child: _exportButtonContent(
+                      format: 'csv',
+                      label: en ? 'Download CSV' : 'CSV indir',
+                    ),
                   ),
                 ),
                 const SizedBox(width: 6),
                 Expanded(
                   child: ElevatedButton(
-                    onPressed: _exporting ? null : () => _export('xlsx'),
+                    onPressed:
+                        _exportingFormat != null ? null : () => _export('xlsx'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF198754),
                       foregroundColor: Colors.white,
@@ -182,13 +270,17 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                       minimumSize: const Size.fromHeight(44),
                       padding: const EdgeInsets.symmetric(horizontal: 4),
                     ),
-                    child: Text(en ? 'Download Excel' : 'Excel indir'),
+                    child: _exportButtonContent(
+                      format: 'xlsx',
+                      label: en ? 'Download Excel' : 'Excel indir',
+                    ),
                   ),
                 ),
                 const SizedBox(width: 6),
                 Expanded(
                   child: ElevatedButton(
-                    onPressed: _exporting ? null : () => _export('pdf'),
+                    onPressed:
+                        _exportingFormat != null ? null : () => _export('pdf'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF0D6EFD),
                       foregroundColor: Colors.white,
@@ -196,7 +288,10 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                       minimumSize: const Size.fromHeight(44),
                       padding: const EdgeInsets.symmetric(horizontal: 4),
                     ),
-                    child: Text(en ? 'Download PDF' : 'PDF indir'),
+                    child: _exportButtonContent(
+                      format: 'pdf',
+                      label: en ? 'Download PDF' : 'PDF indir',
+                    ),
                   ),
                 ),
               ],
@@ -255,6 +350,24 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _exportButtonContent({
+    required String format,
+    required String label,
+  }) {
+    if (_exportingFormat != format) return Text(label);
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const SizedBox.square(
+          dimension: 16,
+          child: CircularProgressIndicator(strokeWidth: 2),
+        ),
+        const SizedBox(width: 6),
+        Flexible(child: Text(label)),
+      ],
     );
   }
 }
