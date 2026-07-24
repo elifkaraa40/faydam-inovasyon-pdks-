@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import 'app_provider.dart';
 import 'services/api_service.dart';
+import 'work_location_overlap.dart';
 
 class WorkLocationScreen extends StatefulWidget {
   const WorkLocationScreen({super.key});
@@ -38,33 +39,47 @@ class _WorkLocationScreenState extends State<WorkLocationScreen> {
     }
   }
 
-  Future<void> _create() async {
-    String locationType = 'Field';
-    DateTime start = DateTime.now();
-    DateTime end = DateTime.now();
-    final reason = TextEditingController();
-    final project = TextEditingController();
-    final customer = TextEditingController();
-    final address = TextEditingController();
+  Future<void> _create({
+    String initialLocationType = 'Field',
+    String initialReason = '',
+    String initialProject = '',
+    String initialCustomer = '',
+    String initialAddress = '',
+  }) async {
+    final en = context.read<AppSettings>().isEnglish;
+    String locationType = initialLocationType;
+    final today = DateUtils.dateOnly(DateTime.now());
+    DateTime start = today;
+    DateTime end = today;
+    final reason = TextEditingController(text: initialReason);
+    final project = TextEditingController(text: initialProject);
+    final customer = TextEditingController(text: initialCustomer);
+    final address = TextEditingController(text: initialAddress);
     String? validationError;
+    String? dateError;
 
     final submit = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          title: const Text('Çalışma Konumu Talebi'),
+          title: Text(en
+              ? 'Work Location Request'
+              : 'Çalışma Konumu Talebi'),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 DropdownButtonFormField<String>(
                   initialValue: locationType,
-                  decoration: const InputDecoration(labelText: 'Çalışma türü'),
-                  items: const [
+                  decoration: InputDecoration(
+                      labelText: en ? 'Work type' : 'Çalışma türü'),
+                  items: [
                     DropdownMenuItem(
-                        value: 'Field', child: Text('Saha görevi')),
+                        value: 'Field',
+                        child: Text(en ? 'Field work' : 'Saha görevi')),
                     DropdownMenuItem(
-                        value: 'Remote', child: Text('Uzaktan çalışma')),
+                        value: 'Remote',
+                        child: Text(en ? 'Remote work' : 'Uzaktan çalışma')),
                   ],
                   onChanged: (value) =>
                       setDialogState(() => locationType = value!),
@@ -72,36 +87,60 @@ class _WorkLocationScreenState extends State<WorkLocationScreen> {
                 ListTile(
                   contentPadding: EdgeInsets.zero,
                   leading: const Icon(Icons.date_range),
-                  title: const Text('Tarih aralığı'),
+                  title: Text(en ? 'Date range' : 'Tarih aralığı'),
                   subtitle: Text('${_date(start)} – ${_date(end)}'),
                   onTap: () async {
                     final range = await showDateRangePicker(
                       context: context,
-                      firstDate: DateTime.now(),
-                      lastDate: DateTime.now().add(const Duration(days: 365)),
+                      firstDate: today,
+                      lastDate: today.add(const Duration(days: 365)),
                       initialDateRange: DateTimeRange(start: start, end: end),
                     );
                     if (range != null) {
+                      if (range.duration.inDays > 89) {
+                        setDialogState(() {
+                          dateError = en
+                              ? 'The date range can be at most 90 days.'
+                              : 'Tarih aralığı en fazla 90 gün olabilir.';
+                        });
+                        return;
+                      }
                       setDialogState(() {
                         start = range.start;
                         end = range.end;
+                        dateError = null;
                       });
                     }
                   },
                 ),
+                if (dateError != null)
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      dateError!,
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.error,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
                 TextField(
                     controller: project,
-                    decoration: const InputDecoration(
-                        labelText: 'Proje (isteğe bağlı)')),
+                    decoration: InputDecoration(
+                        labelText: en
+                            ? 'Project (optional)'
+                            : 'Proje (isteğe bağlı)')),
                 TextField(
                     controller: customer,
-                    decoration: const InputDecoration(
-                        labelText: 'Müşteri (isteğe bağlı)')),
+                    decoration: InputDecoration(
+                        labelText: en
+                            ? 'Customer (optional)'
+                            : 'Müşteri (isteğe bağlı)')),
                 if (locationType == 'Field')
                   TextField(
                       controller: address,
-                      decoration:
-                          const InputDecoration(labelText: 'Saha adresi')),
+                      decoration: InputDecoration(
+                          labelText: en ? 'Field address' : 'Saha adresi')),
                 TextField(
                   controller: reason,
                   minLines: 2,
@@ -112,7 +151,8 @@ class _WorkLocationScreenState extends State<WorkLocationScreen> {
                     }
                   },
                   decoration: InputDecoration(
-                      labelText: 'Açıklama', errorText: validationError),
+                      labelText: en ? 'Description' : 'Açıklama',
+                      errorText: validationError),
                 ),
               ],
             ),
@@ -120,49 +160,143 @@ class _WorkLocationScreenState extends State<WorkLocationScreen> {
           actions: [
             TextButton(
                 onPressed: () => Navigator.pop(context, false),
-                child: const Text('İptal')),
+                child: Text(en ? 'Cancel' : 'İptal')),
             FilledButton(
               onPressed: () {
+                if (end.difference(start).inDays > 89) {
+                  setDialogState(() {
+                    dateError = en
+                        ? 'The date range can be at most 90 days.'
+                        : 'Tarih aralığı en fazla 90 gün olabilir.';
+                  });
+                  return;
+                }
                 if (reason.text.trim().length < 10) {
-                  setDialogState(() => validationError =
-                      'Açıklama en az 10 karakter olmalıdır.');
+                  setDialogState(() => validationError = en
+                      ? 'The description must be at least 10 characters.'
+                      : 'Açıklama en az 10 karakter olmalıdır.');
                   return;
                 }
                 Navigator.pop(context, true);
               },
-              child: const Text('Gönder'),
+              child: Text(en ? 'Submit' : 'Gönder'),
             ),
           ],
         ),
       ),
     );
 
-    if (submit == true && mounted) {
-      try {
-        await _api.createWorkLocationRequest(
-          locationType: locationType,
-          startDate: start,
-          endDate: end,
-          reason: reason.text.trim(),
-          projectName: _nullable(project.text),
-          customerName: _nullable(customer.text),
-          fieldAddress:
-              locationType == 'Field' ? _nullable(address.text) : null,
-        );
-        await _load();
-      } catch (error) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-                content: Text('$error'), backgroundColor: Colors.redAccent),
-          );
-        }
-      }
+    if (submit != true || !mounted) {
+      reason.dispose();
+      project.dispose();
+      customer.dispose();
+      address.dispose();
+      return;
     }
+
+    final reasonText = reason.text.trim();
+    final projectText = project.text.trim();
+    final customerText = customer.text.trim();
+    final addressText = address.text.trim();
     reason.dispose();
     project.dispose();
     customer.dispose();
     address.dispose();
+
+    try {
+      await _api.createWorkLocationRequest(
+        locationType: locationType,
+        startDate: start,
+        endDate: end,
+        reason: reasonText,
+        projectName: _nullable(projectText),
+        customerName: _nullable(customerText),
+        fieldAddress:
+            locationType == 'Field' ? _nullable(addressText) : null,
+      );
+      await _load();
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      final overlap = WorkLocationOverlapDetails.fromException(error);
+      if (overlap != null) {
+        final tryAnotherDate =
+            await _showWorkLocationOverlapDialog(overlap, en);
+        if (tryAnotherDate && mounted) {
+          await _create(
+            initialLocationType: locationType,
+            initialReason: reasonText,
+            initialProject: projectText,
+            initialCustomer: customerText,
+            initialAddress: addressText,
+          );
+        }
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(error.toString()),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('$error'),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+    }
+  }
+
+  Future<bool> _showWorkLocationOverlapDialog(
+    WorkLocationOverlapDetails overlap,
+    bool en,
+  ) async {
+    final range = overlap.formattedRange;
+    final message = overlap.isLeave
+        ? (en
+            ? 'There is a pending or approved leave request in the selected date range.'
+            : 'Seçtiğiniz tarih aralığında bekleyen veya onaylanmış bir izin kaydı bulunmaktadır.')
+        : (en
+            ? 'There is another pending or approved work location record in the selected date range.'
+            : 'Seçtiğiniz tarih aralığında bekleyen veya onaylanmış başka bir çalışma konumu kaydı bulunmaktadır.');
+    return await showDialog<bool>(
+          context: context,
+          barrierDismissible: false,
+          builder: (dialogContext) => AlertDialog(
+            title: Text(en
+                ? 'Work location date is not available'
+                : 'Çalışma konumu tarihi uygun değil'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(message),
+                if (range != null) ...[
+                  const SizedBox(height: 12),
+                  Text(
+                    en
+                        ? 'Existing record: $range'
+                        : 'Mevcut kayıt: $range',
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                ],
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext, false),
+                child: Text(en ? 'Close' : 'Kapat'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(dialogContext, true),
+                child: Text(en ? 'Try other dates' : 'Başka tarih dene'),
+              ),
+            ],
+          ),
+        ) ??
+        false;
   }
 
   String? _nullable(String value) => value.trim().isEmpty ? null : value.trim();
